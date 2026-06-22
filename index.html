@@ -158,6 +158,7 @@
     display: none;
   }
   .player-btn.has-history .player-badge { display: block; }
+  .player-stats { display: block; font-size: 0.65rem; color: var(--muted); margin-top: 4px; line-height: 1.4; }
 
   /* ══ SETUP ══ */
   #setup-screen {
@@ -485,26 +486,32 @@
       <button class="player-btn" onclick="selectPlayer('Ju')">
         <span class="player-dot">👩</span>Ju
         <span class="player-badge" id="badge-Ju">●</span>
+        <span class="player-stats" id="stats-Ju"></span>
       </button>
       <button class="player-btn" onclick="selectPlayer('Sari')">
         <span class="player-dot">👧</span>Sari
         <span class="player-badge" id="badge-Sari">●</span>
+        <span class="player-stats" id="stats-Sari"></span>
       </button>
       <button class="player-btn" onclick="selectPlayer('Ro')">
         <span class="player-dot">👦</span>Ro
         <span class="player-badge" id="badge-Ro">●</span>
+        <span class="player-stats" id="stats-Ro"></span>
       </button>
       <button class="player-btn" onclick="selectPlayer('Kri')">
         <span class="player-dot">👩</span>Kri
         <span class="player-badge" id="badge-Kri">●</span>
+        <span class="player-stats" id="stats-Kri"></span>
       </button>
       <button class="player-btn" onclick="selectPlayer('Ali')">
         <span class="player-dot">👧</span>Ali
         <span class="player-badge" id="badge-Ali">●</span>
+        <span class="player-stats" id="stats-Ali"></span>
       </button>
       <button class="player-btn" onclick="selectPlayer('Invitado')">
         <span class="player-dot">🧑</span>Invitado
         <span class="player-badge" id="badge-Invitado">●</span>
+        <span class="player-stats" id="stats-Invitado"></span>
       </button>
     </div>
   </div>
@@ -646,9 +653,12 @@ let currentPlayer = null;
 
 function saveSession() {
   if (!currentPlayer || currentPlayer === 'Invitado') return;
+  accumulateTime();
   localStorage.setItem(`lc_config_${currentPlayer}`, JSON.stringify(config));
   localStorage.setItem(`lc_history_${currentPlayer}`, JSON.stringify(conversationHistory));
 }
+
+document.addEventListener('visibilitychange', () => { if (document.hidden) accumulateTime(); });
 
 function loadSession(player) {
   try {
@@ -667,18 +677,63 @@ function clearSession() {
   localStorage.removeItem(`lc_history_${currentPlayer}`);
 }
 
+// ══ STATS ══
+let sessionStart = null;
+
+function getStats(player) {
+  try { return JSON.parse(localStorage.getItem(`lc_stats_${player}`)) || {}; } catch(e) { return {}; }
+}
+
+function saveStats(player, stats) {
+  if (player === 'Invitado') return;
+  localStorage.setItem(`lc_stats_${player}`, JSON.stringify(stats));
+}
+
+function updateStreak(player) {
+  if (player === 'Invitado') return;
+  const stats = getStats(player);
+  const today = new Date().toISOString().slice(0, 10);
+  if (stats.lastDate === today) return;
+  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  stats.streak = stats.lastDate === yesterday ? (stats.streak || 0) + 1 : 1;
+  stats.lastDate = today;
+  saveStats(player, stats);
+}
+
+function accumulateTime() {
+  if (!currentPlayer || currentPlayer === 'Invitado' || !sessionStart) return;
+  const elapsed = Math.floor((Date.now() - sessionStart) / 1000);
+  if (elapsed < 5) return;
+  const stats = getStats(currentPlayer);
+  stats.totalSeconds = (stats.totalSeconds || 0) + elapsed;
+  saveStats(currentPlayer, stats);
+  sessionStart = Date.now();
+}
+
+function renderStats(player) {
+  const el = document.getElementById(`stats-${player}`);
+  if (!el) return;
+  if (player === 'Invitado') { el.textContent = ''; return; }
+  const stats = getStats(player);
+  const mins = Math.floor((stats.totalSeconds || 0) / 60);
+  const streak = stats.streak || 0;
+  el.textContent = `⏱ ${mins} min  🔥 ${streak} día${streak !== 1 ? 's' : ''}`;
+}
+
 function showPlayerScreen() {
-  // Show badge for players that have saved history
-  ['Ju','Sari','Ro','Kri','Ali'].forEach(p => {
-    const saved = loadSession(p);
+  accumulateTime();
+  ['Ju','Sari','Ro','Kri','Ali','Invitado'].forEach(p => {
+    const saved = p !== 'Invitado' ? loadSession(p) : null;
     const badge = document.getElementById(`badge-${p}`);
     if (badge) badge.parentElement.classList.toggle('has-history', !!saved);
+    renderStats(p);
   });
   document.getElementById('player-screen').style.display = 'flex';
 }
 
 function selectPlayer(player) {
   currentPlayer = player;
+  updateStreak(player);
   document.getElementById('player-screen').style.display = 'none';
   document.getElementById('setup-screen').style.display = 'flex';
   checkSavedSession();
@@ -1082,6 +1137,7 @@ micBtn.addEventListener('click', () => {
 
 // ══ KICKOFF ══
 async function kickoffConversation(isContinuing = false) {
+  sessionStart = Date.now();
   const agentEl = document.getElementById('transcript-agent');
   if (isContinuing) {
     // Show last agent message from history
