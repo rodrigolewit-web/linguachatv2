@@ -1,0 +1,1156 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LinguaChat — Conversación por voz</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@300;400;500;600&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0e0f14;
+    --surface: #16181f;
+    --surface2: #1e2028;
+    --border: #2a2d38;
+    --accent-en: #4f9cf9;
+    --accent-fr: #c084fc;
+    --accent-pt: #34d399;
+    --accent: #4f9cf9;
+    --text: #e8eaf0;
+    --muted: #6b7280;
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ══ LOGIN ══ */
+  #login-screen {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+    padding: 2rem;
+  }
+  .login-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 2rem;
+    width: 100%;
+    max-width: 360px;
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+    align-items: center;
+  }
+  .login-card h2 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.8rem;
+    background: linear-gradient(135deg, var(--accent-en) 0%, var(--accent-fr) 50%, var(--accent-pt) 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .login-card input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 1rem;
+    text-align: center;
+    letter-spacing: 0.1em;
+  }
+  .login-card input:focus { outline: none; border-color: var(--accent-fr); }
+  .login-card button {
+    width: 100%;
+    padding: 0.9rem;
+    border-radius: 10px;
+    border: none;
+    background: var(--accent-fr);
+    color: #0e0f14;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .login-card button:hover { filter: brightness(1.1); }
+  .login-error {
+    font-size: 0.78rem;
+    color: #fca5a5;
+    display: none;
+  }
+
+  /* ══ PLAYER SELECT ══ */
+  #player-screen {
+    flex: 1;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+    padding: 2rem;
+  }
+  .player-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 2rem;
+    width: 100%;
+    max-width: 360px;
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+    align-items: center;
+  }
+  .player-card h2 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.5rem;
+    color: var(--text);
+  }
+  .player-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.8rem;
+    width: 100%;
+  }
+  .player-btn {
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    padding: 1.2rem 0.5rem;
+    cursor: pointer;
+    text-align: center;
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    transition: all 0.15s;
+    position: relative;
+  }
+  .player-btn:hover { border-color: var(--accent-fr); background: rgba(192,132,252,0.1); color: var(--accent-fr); }
+  .player-btn .player-dot {
+    display: block;
+    font-size: 1.8rem;
+    margin-bottom: 0.3rem;
+  }
+  .player-btn .player-badge {
+    position: absolute;
+    top: 6px; right: 6px;
+    background: var(--accent-pt);
+    color: #0e0f14;
+    font-size: 0.55rem;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 10px;
+    display: none;
+  }
+  .player-btn.has-history .player-badge { display: block; }
+
+  /* ══ SETUP ══ */
+  #setup-screen {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow-y: auto;
+    padding: 1.2rem 1rem 2rem;
+    gap: 1.2rem;
+  }
+  #setup-screen::-webkit-scrollbar { width: 3px; }
+  #setup-screen::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  .logo { text-align: center; flex-shrink: 0; }
+  .logo h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(1.6rem, 5vw, 3rem);
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, var(--accent-en) 0%, var(--accent-fr) 50%, var(--accent-pt) 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .logo p { color: var(--muted); font-size: 0.78rem; margin-top: 0.25rem; letter-spacing: 0.05em; text-transform: uppercase; font-weight: 300; }
+
+  .setup-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+    padding: 1.25rem; width: 100%; max-width: 560px;
+    display: flex; flex-direction: column; gap: 1.1rem; flex-shrink: 0;
+  }
+  .setup-section label {
+    display: block; font-size: 0.68rem; font-weight: 600;
+    letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.5rem;
+  }
+  .option-grid { display: grid; gap: 0.45rem; }
+  .option-grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
+
+  .opt-btn {
+    background: var(--surface2); border: 1.5px solid var(--border); border-radius: 10px;
+    padding: 0.55rem 0.4rem; cursor: pointer; text-align: center;
+    transition: all 0.15s ease; color: var(--text);
+    font-family: 'Inter', sans-serif; font-size: 0.8rem; font-weight: 500;
+  }
+  .opt-btn:hover { border-color: var(--accent); background: #1e2535; }
+  .opt-btn.selected { border-color: var(--accent); background: rgba(79,156,249,0.12); color: var(--accent); }
+  .opt-btn .emoji { display: block; font-size: 1.1rem; margin-bottom: 0.2rem; }
+  .opt-btn .sub { display: block; font-size: 0.63rem; color: var(--muted); margin-top: 0.1rem; font-weight: 400; }
+
+  .opt-btn.lang-en.selected { border-color: var(--accent-en); background: rgba(79,156,249,0.1); color: var(--accent-en); }
+  .opt-btn.lang-fr.selected { border-color: var(--accent-fr); background: rgba(192,132,252,0.1); color: var(--accent-fr); }
+  .opt-btn.lang-pt.selected { border-color: var(--accent-pt); background: rgba(52,211,153,0.1); color: var(--accent-pt); }
+
+  .divider { height: 1px; background: var(--border); margin: 0 -1.25rem; }
+
+  .start-btn {
+    width: 100%; padding: 0.9rem; border-radius: 10px; border: none;
+    background: var(--accent); color: #0e0f14;
+    font-family: 'Inter', sans-serif; font-size: 0.95rem; font-weight: 600;
+    cursor: pointer; transition: all 0.15s ease; letter-spacing: 0.02em;
+  }
+  .start-btn:hover:not(:disabled) { filter: brightness(1.1); transform: translateY(-1px); }
+  .start-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  /* ══ VOICE SCREEN ══ */
+  #voice-screen {
+    display: none;
+    flex-direction: column;
+    height: 100vh;
+    align-items: center;
+  }
+
+  /* Header */
+  .voice-header {
+    width: 100%;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0.7rem 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .vh-left { display: flex; align-items: center; gap: 0.6rem; }
+  .vh-flag { font-size: 1.5rem; }
+  .vh-title { font-weight: 600; font-size: 0.9rem; }
+  .vh-sub { font-size: 0.68rem; color: var(--muted); }
+  .reset-btn {
+    background: transparent; border: 1px solid var(--border); color: var(--muted);
+    font-size: 0.72rem; padding: 0.3rem 0.6rem; border-radius: 6px;
+    cursor: pointer; font-family: 'Inter', sans-serif; transition: all 0.15s;
+  }
+  .reset-btn:hover { border-color: var(--text); color: var(--text); }
+
+  /* Center stage */
+  .voice-stage {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2rem;
+    padding: 1.5rem;
+    width: 100%;
+  }
+
+  /* Orb — animated speaking indicator */
+  .orb-wrap {
+    position: relative;
+    width: 140px; height: 140px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .orb-ring {
+    position: absolute;
+    border-radius: 50%;
+    border: 2px solid var(--accent);
+    opacity: 0;
+    animation: none;
+  }
+  .orb-ring-1 { width: 100%; height: 100%; }
+  .orb-ring-2 { width: 120%; height: 120%; }
+  .orb-ring-3 { width: 140%; height: 140%; }
+
+  .orb {
+    width: 90px; height: 90px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #3a8ef0, #1a3a6e);
+    border: 2px solid var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2.2rem;
+    position: relative;
+    z-index: 1;
+    transition: transform 0.2s ease;
+    box-shadow: 0 0 30px rgba(79,156,249,0.2);
+  }
+
+  /* States */
+  .orb-wrap.speaking .orb-ring { animation: pulse-ring 1.5s ease-out infinite; opacity: 1; }
+  .orb-wrap.speaking .orb-ring-2 { animation-delay: 0.4s; }
+  .orb-wrap.speaking .orb-ring-3 { animation-delay: 0.8s; }
+  .orb-wrap.speaking .orb { transform: scale(1.05); box-shadow: 0 0 50px rgba(79,156,249,0.4); }
+
+  .orb-wrap.listening .orb { border-color: #ef4444; box-shadow: 0 0 40px rgba(239,68,68,0.4); background: radial-gradient(circle at 35% 35%, #c0392b, #6e1a1a); }
+  .orb-wrap.listening .orb-ring { border-color: #ef4444; animation: pulse-ring 0.8s ease-out infinite; opacity: 1; }
+  .orb-wrap.listening .orb-ring-2 { animation-delay: 0.2s; }
+  .orb-wrap.listening .orb-ring-3 { animation-delay: 0.4s; }
+
+  .orb-wrap.thinking .orb { border-color: #f59e0b; box-shadow: 0 0 40px rgba(245,158,11,0.3); background: radial-gradient(circle at 35% 35%, #b07d1a, #4a3200); animation: spin-slow 2s linear infinite; }
+
+  @keyframes pulse-ring {
+    0% { transform: scale(1); opacity: 0.6; }
+    100% { transform: scale(1.15); opacity: 0; }
+  }
+  @keyframes spin-slow {
+    from { transform: rotate(0deg); } to { transform: rotate(360deg); }
+  }
+
+  /* Status text */
+  .status-label {
+    font-size: 0.8rem;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-weight: 500;
+    height: 1.2rem;
+    transition: color 0.3s;
+  }
+  .status-label.speaking { color: var(--accent); }
+  .status-label.listening { color: #ef4444; }
+  .status-label.thinking { color: #f59e0b; }
+
+  /* Transcript card */
+  .transcript-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1rem 1.2rem;
+    width: 100%;
+    max-width: 480px;
+    min-height: 80px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .transcript-agent {
+    font-size: 0.85rem;
+    line-height: 1.6;
+    color: var(--text);
+    min-height: 1.4rem;
+  }
+  .transcript-translation {
+    font-size: 0.72rem;
+    color: var(--muted);
+    border-top: 1px solid var(--border);
+    padding-top: 0.5rem;
+    font-style: italic;
+    line-height: 1.5;
+    display: none;
+  }
+  .transcript-user {
+    font-size: 0.8rem;
+    color: #8ab4f8;
+    border-top: 1px solid var(--border);
+    padding-top: 0.5rem;
+    min-height: 1.2rem;
+    font-style: italic;
+  }
+
+  /* Mic button */
+  .mic-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.7rem;
+  }
+  .mic-btn {
+    width: 72px; height: 72px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    background: var(--surface2);
+    color: var(--muted);
+    font-size: 1.8rem;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s ease;
+  }
+  .mic-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  .mic-btn.active { border-color: #ef4444; color: #ef4444; background: rgba(239,68,68,0.1); animation: mic-pulse 1s ease infinite; }
+  .mic-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  @keyframes mic-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.4); } 50% { box-shadow: 0 0 0 10px rgba(239,68,68,0); } }
+
+  .mic-hint { font-size: 0.72rem; color: var(--muted); text-align: center; }
+
+  /* Listen button */
+  .listen-btn {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.7rem 1.4rem;
+    border-radius: 30px;
+    border: 2px solid var(--accent);
+    background: rgba(79,156,249,0.12);
+    color: var(--accent);
+    font-family: 'Inter', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .listen-btn:hover { background: rgba(79,156,249,0.22); }
+  .listen-btn:active { transform: scale(0.97); }
+
+  /* Text fallback input */
+  .text-fallback {
+    display: none;
+    width: 100%;
+    max-width: 480px;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .text-fallback textarea {
+    width: 100%;
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 0.7rem 0.9rem;
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 0.88rem;
+    resize: none;
+    height: 70px;
+    line-height: 1.5;
+  }
+  .text-fallback textarea:focus { outline: none; border-color: var(--accent); }
+  .text-fallback textarea::placeholder { color: var(--muted); }
+  .text-fallback button {
+    padding: 0.65rem;
+    border-radius: 10px;
+    border: none;
+    background: var(--accent);
+    color: #0e0f14;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .fallback-note {
+    font-size: 0.7rem;
+    color: var(--muted);
+    text-align: center;
+  }
+
+  /* Error banner */
+  .error-banner {
+    display: none;
+    background: rgba(239,68,68,0.1);
+    border: 1px solid rgba(239,68,68,0.3);
+    border-radius: 8px;
+    padding: 0.6rem 1rem;
+    font-size: 0.78rem;
+    color: #fca5a5;
+    text-align: center;
+    max-width: 400px;
+    width: 100%;
+  }
+</style>
+</head>
+<body>
+
+<!-- ══ LOGIN SCREEN ══ -->
+<div id="login-screen">
+  <div class="login-card">
+    <h2>LinguaChat</h2>
+    <p style="color:var(--muted);font-size:0.8rem;">Ingresá tu clave de acceso</p>
+    <input type="password" id="login-input" placeholder="••••••" autocomplete="off" />
+    <div class="login-error" id="login-error">Clave incorrecta</div>
+    <button onclick="checkLogin()">Entrar</button>
+  </div>
+</div>
+
+<!-- ══ PLAYER SCREEN ══ -->
+<div id="player-screen">
+  <div class="player-card">
+    <h2>¿Quién juega?</h2>
+    <div class="player-grid">
+      <button class="player-btn" onclick="selectPlayer('Ju')">
+        <span class="player-dot">👩</span>Ju
+        <span class="player-badge" id="badge-Ju">●</span>
+      </button>
+      <button class="player-btn" onclick="selectPlayer('Sari')">
+        <span class="player-dot">👧</span>Sari
+        <span class="player-badge" id="badge-Sari">●</span>
+      </button>
+      <button class="player-btn" onclick="selectPlayer('Ro')">
+        <span class="player-dot">👦</span>Ro
+        <span class="player-badge" id="badge-Ro">●</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SETUP SCREEN ══ -->
+<div id="setup-screen">
+  <div class="logo">
+    <h1>LinguaChat</h1>
+    <p>Conversación por voz con IA</p>
+  </div>
+
+  <div class="setup-card">
+    <!-- IDIOMA -->
+    <div class="setup-section">
+      <label>Idioma a practicar</label>
+      <div class="option-grid cols-3">
+        <button class="opt-btn lang-en" data-group="lang" data-val="en"><span class="emoji">🇬🇧</span>English</button>
+        <button class="opt-btn lang-fr" data-group="lang" data-val="fr"><span class="emoji">🇫🇷</span>Français</button>
+        <button class="opt-btn lang-pt" data-group="lang" data-val="pt"><span class="emoji">🇧🇷</span>Português</button>
+      </div>
+    </div>
+    <div class="divider"></div>
+
+    <!-- NIVEL -->
+    <div class="setup-section">
+      <label>Tu nivel en ese idioma</label>
+      <div class="option-grid cols-3">
+        <button class="opt-btn" data-group="level" data-val="beginner"><span class="emoji">🌱</span>Principiante<span class="sub">Poco o nada</span></button>
+        <button class="opt-btn" data-group="level" data-val="intermediate"><span class="emoji">📚</span>Intermedio<span class="sub">Me defiendo</span></button>
+        <button class="opt-btn" data-group="level" data-val="advanced"><span class="emoji">🔥</span>Avanzado<span class="sub">Casi fluido</span></button>
+      </div>
+    </div>
+    <div class="divider"></div>
+
+    <!-- VELOCIDAD -->
+    <div class="setup-section">
+      <label>Ritmo de la conversación</label>
+      <div class="option-grid cols-3">
+        <button class="opt-btn" data-group="pace" data-val="slow"><span class="emoji">🐢</span>Pausado<span class="sub">Frases cortas</span></button>
+        <button class="opt-btn" data-group="pace" data-val="normal"><span class="emoji">🚶</span>Normal<span class="sub">Fluido</span></button>
+        <button class="opt-btn" data-group="pace" data-val="fast"><span class="emoji">⚡</span>Rápido<span class="sub">Desafiante</span></button>
+      </div>
+    </div>
+    <div class="divider"></div>
+
+    <!-- REGISTRO -->
+    <div class="setup-section">
+      <label>Registro de la conversación</label>
+      <div class="option-grid cols-3">
+        <button class="opt-btn" data-group="register" data-val="formal"><span class="emoji">👔</span>Formal<span class="sub">Negocios</span></button>
+        <button class="opt-btn" data-group="register" data-val="neutral"><span class="emoji">💬</span>Normal<span class="sub">Everyday</span></button>
+        <button class="opt-btn" data-group="register" data-val="informal"><span class="emoji">😎</span>Informal<span class="sub">Casual</span></button>
+      </div>
+    </div>
+
+    <button class="start-btn" id="continue-btn" style="display:none;background:var(--surface2);border:1.5px solid var(--accent);color:var(--accent);">↩ Continuar conversación anterior</button>
+    <button class="start-btn" id="start-btn" disabled>🎙 Empezar conversación nueva →</button>
+  </div>
+</div>
+
+<!-- ══ VOICE SCREEN ══ -->
+<div id="voice-screen">
+  <div class="voice-header">
+    <div class="vh-left">
+      <span class="vh-flag" id="hdr-flag"></span>
+      <div>
+        <div class="vh-title" id="hdr-title"></div>
+        <div class="vh-sub" id="hdr-sub"></div>
+      </div>
+    </div>
+    <button class="reset-btn" id="reset-btn">← Volver</button>
+  </div>
+
+  <div class="voice-stage">
+
+    <!-- Orb -->
+    <div class="orb-wrap" id="orb-wrap">
+      <div class="orb-ring orb-ring-1"></div>
+      <div class="orb-ring orb-ring-2"></div>
+      <div class="orb-ring orb-ring-3"></div>
+      <div class="orb" id="orb-emoji">🤖</div>
+    </div>
+
+    <div class="status-label" id="status-label">Listo</div>
+
+    <!-- Transcript -->
+    <div class="transcript-card">
+      <div class="transcript-agent" id="transcript-agent">…</div>
+      <div class="transcript-translation" id="transcript-translation"></div>
+      <div class="transcript-user" id="transcript-user"></div>
+    </div>
+
+    <!-- Error -->
+    <div class="error-banner" id="error-banner"></div>
+
+    <!-- Listen button (shown when TTS needs user gesture) -->
+    <button class="listen-btn" id="listen-btn" onclick="onListenTap()">▶ Escuchar a Alex</button>
+
+    <!-- Text fallback (shown when mic not available) -->
+    <div class="text-fallback" id="text-fallback">
+      <textarea id="text-input" placeholder="Escribe tu respuesta aquí…"></textarea>
+      <button onclick="sendTextFallback()">Enviar respuesta</button>
+      <div class="fallback-note">💡 Para usar voz: abre este archivo desde un servidor HTTPS</div>
+    </div>
+
+    <!-- Mic -->
+    <div class="mic-section">
+      <button class="mic-btn" id="mic-btn" disabled title="Toca para hablar">🎙</button>
+      <div class="mic-hint" id="mic-hint">Espera a que el agente termine de hablar</div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ══ LOGIN ══
+document.getElementById('setup-screen').style.display = 'none';
+document.getElementById('login-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') checkLogin();
+});
+function checkLogin() {
+  const val = document.getElementById('login-input').value;
+  if (val === 'JuSariAli') {
+    document.getElementById('login-screen').style.display = 'none';
+    showPlayerScreen();
+  } else {
+    const err = document.getElementById('login-error');
+    err.style.display = 'block';
+    document.getElementById('login-input').value = '';
+  }
+}
+
+// ══ CONFIG ══
+const config = { lang: null, level: null, pace: null, register: null };
+
+// ══ PERSISTENCE ══
+let currentPlayer = null;
+
+function saveSession() {
+  if (!currentPlayer) return;
+  localStorage.setItem(`lc_config_${currentPlayer}`, JSON.stringify(config));
+  localStorage.setItem(`lc_history_${currentPlayer}`, JSON.stringify(conversationHistory));
+}
+
+function loadSession(player) {
+  try {
+    const savedConfig = JSON.parse(localStorage.getItem(`lc_config_${player}`));
+    const savedHistory = JSON.parse(localStorage.getItem(`lc_history_${player}`));
+    if (savedConfig && savedHistory && savedHistory.length > 0) {
+      return { config: savedConfig, history: savedHistory };
+    }
+  } catch(e) {}
+  return null;
+}
+
+function clearSession() {
+  if (!currentPlayer) return;
+  localStorage.removeItem(`lc_config_${currentPlayer}`);
+  localStorage.removeItem(`lc_history_${currentPlayer}`);
+}
+
+function showPlayerScreen() {
+  // Show badge for players that have saved history
+  ['Ju','Sari','Ro'].forEach(p => {
+    const saved = loadSession(p);
+    const badge = document.getElementById(`badge-${p}`);
+    if (badge) badge.parentElement.classList.toggle('has-history', !!saved);
+  });
+  document.getElementById('player-screen').style.display = 'flex';
+}
+
+function selectPlayer(player) {
+  currentPlayer = player;
+  document.getElementById('player-screen').style.display = 'none';
+  document.getElementById('setup-screen').style.display = 'flex';
+  checkSavedSession();
+}
+
+
+const LANG_META = {
+  en: { flag: '🇬🇧', name: 'English',    agentName: 'Alex',    ttsLang: 'en-US', sttLang: 'en-US' },
+  fr: { flag: '🇫🇷', name: 'Français',   agentName: 'Camille', ttsLang: 'fr-FR', sttLang: 'fr-FR' },
+  pt: { flag: '🇧🇷', name: 'Português',  agentName: 'Lucas',   ttsLang: 'pt-BR', sttLang: 'pt-BR' },
+};
+
+const conversationHistory = [];
+let recognition = null;
+let currentUtterance = null;
+let isAgentSpeaking = false;
+
+// ══ SETUP BUTTONS ══
+document.querySelectorAll('.opt-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const group = btn.dataset.group;
+    document.querySelectorAll(`[data-group="${group}"]`).forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    config[group] = btn.dataset.val;
+    checkReady();
+  });
+});
+
+function checkReady() {
+  const ready = config.lang && config.level && config.pace && config.register;
+  document.getElementById('start-btn').disabled = !ready;
+  if (config.lang) {
+    const colors = { en: '#4f9cf9', fr: '#c084fc', pt: '#34d399' };
+    document.documentElement.style.setProperty('--accent', colors[config.lang]);
+  }
+}
+
+// Check for saved session after login
+function checkSavedSession() {
+  const saved = loadSession(currentPlayer);
+  const btn = document.getElementById('continue-btn');
+  btn.style.display = saved ? 'block' : 'none';
+  btn.textContent = saved ? `↩ Continuar conversación de ${currentPlayer}` : '';
+}
+
+document.getElementById('continue-btn').addEventListener('click', () => {
+  const saved = loadSession(currentPlayer);
+  if (!saved) return;
+  Object.assign(config, saved.config);
+  conversationHistory.push(...saved.history);
+  // Restore selected buttons visually
+  ['lang','level','pace','register'].forEach(group => {
+    const val = config[group];
+    if (val) {
+      document.querySelectorAll(`[data-group="${group}"]`).forEach(b => b.classList.remove('selected'));
+      const btn = document.querySelector(`[data-group="${group}"][data-val="${val}"]`);
+      if (btn) btn.classList.add('selected');
+    }
+  });
+  unlockTTS();
+  startVoiceSession(true);
+});
+
+document.getElementById('start-btn').addEventListener('click', () => {
+  clearSession();
+  conversationHistory.length = 0;
+  unlockTTS();
+  startVoiceSession(false);
+});
+document.getElementById('reset-btn').addEventListener('click', resetSession);
+
+// ══ START ══
+function startVoiceSession(isContinuing = false) {
+  const meta = LANG_META[config.lang];
+  document.getElementById('hdr-flag').textContent = meta.flag;
+  document.getElementById('hdr-title').textContent = meta.name + ' — ' + meta.agentName;
+  const labels = [
+    { beginner: '🌱 Principiante', intermediate: '📚 Intermedio', advanced: '🔥 Avanzado' }[config.level],
+    { slow: '🐢 Pausado', normal: '🚶 Normal', fast: '⚡ Rápido' }[config.pace],
+    { formal: '👔 Formal', neutral: '💬 Normal', informal: '😎 Informal' }[config.register],
+  ];
+  document.getElementById('hdr-sub').textContent = labels.join(' · ');
+  document.getElementById('orb-emoji').textContent = meta.flag;
+
+  // Update listen button label with agent name
+  const listenBtn = document.getElementById('listen-btn');
+  if (listenBtn) listenBtn.textContent = '▶ Escuchar a ' + meta.agentName;
+
+  document.getElementById('setup-screen').style.display = 'none';
+  document.getElementById('voice-screen').style.display = 'flex';
+
+  setupSpeechRecognition();
+  kickoffConversation(isContinuing);
+}
+
+function resetSession() {
+  // Stop everything
+  if (currentUtterance) { window.speechSynthesis.cancel(); }
+  if (recognition) { try { recognition.abort(); } catch(e){} }
+  conversationHistory.length = 0;
+  isAgentSpeaking = false;
+
+  document.getElementById('transcript-agent').textContent = '…';
+  document.getElementById('transcript-translation').style.display = 'none';
+  document.getElementById('transcript-user').textContent = '';
+  document.getElementById('error-banner').style.display = 'none';
+
+  document.getElementById('voice-screen').style.display = 'none';
+  document.getElementById('setup-screen').style.display = 'none';
+  showPlayerScreen();
+}
+
+// ══ SYSTEM PROMPT ══
+function buildSystemPrompt() {
+  const meta = LANG_META[config.lang];
+
+  const levelInstr = {
+    beginner:     'Use VERY simple vocabulary and SHORT sentences (max 12 words each). Speak slowly and clearly. Basic topics: greetings, daily life, food, family.',
+    intermediate: 'Use everyday vocabulary with moderate complexity. Mix simple and compound sentences. Topics: hobbies, travel, work, culture.',
+    advanced:     'Use rich vocabulary, idiomatic expressions, complex sentences. Discuss nuanced topics freely. Challenge the user naturally.'
+  }[config.level];
+
+  const paceInstr = {
+    slow:   'Keep responses extremely short: 1-2 sentences only. ONE question at a time. Simple words.',
+    normal: 'Keep responses to 2-3 sentences. One clear follow-up question. Natural conversational flow.',
+    fast:   'Give 3-5 sentence responses. Multiple ideas. Move quickly between topics. Simulate native speed.'
+  }[config.pace];
+
+  const registerInstr = {
+    formal:   'Use formal register. English: no contractions, professional vocabulary. French: always "vous". Portuguese: "o senhor/a senhora".',
+    neutral:  'Use neutral everyday register. Contractions fine. Friendly but not slangy.',
+    informal: 'Use casual colloquial register. Slang and contractions encouraged. French: "tu". Portuguese: "você" casually.'
+  }[config.register];
+
+  const translationInstr = config.level !== 'advanced'
+    ? `CRITICAL: After your response in ${meta.name}, add exactly "---" on a new line, then a SHORT Spanish summary labeled "ES:". Example:\nHello! How are you today?\n---\nES: Te saluda y pregunta cómo estás.`
+    : `Do NOT add Spanish translations. Full immersion only.`;
+
+  return `You are ${meta.agentName}, a warm and encouraging ${meta.name} conversation tutor. This is a VOICE conversation — the user will speak and you will respond. Your responses will be converted to speech.
+
+CRITICAL FOR VOICE: Write ONLY natural spoken sentences. NO bullet points, NO lists, NO markdown, NO asterisks, NO special characters. Write exactly as you would speak out loud.
+
+LANGUAGE: Always respond in ${meta.name}.
+
+LEVEL: ${levelInstr}
+
+PACE: ${paceInstr}
+
+REGISTER: ${registerInstr}
+
+ERROR CORRECTION: If the user makes a clear mistake, gently correct it naturally in conversation (e.g., "Oh, you mean... yes!" or "Actually we say...") without interrupting the flow.
+
+ENCOURAGEMENT: Be warm. Brief praise when the user does well.
+
+${translationInstr}
+
+Begin with a warm greeting in ${meta.name} and start a simple, engaging conversation immediately.`;
+}
+
+// ══ API CALL ══
+async function callAgent(userMessage) {
+  setOrbState('thinking');
+  setStatus('Pensando…', 'thinking');
+
+  // Only push if explicitly passed (kickoff already pushed its message)
+  if (userMessage && userMessage !== '__already_pushed__') {
+    conversationHistory.push({ role: 'user', content: userMessage });
+  }
+
+  try {
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        system: buildSystemPrompt(),
+        messages: conversationHistory
+      })
+    });
+
+    const data = await response.json();
+    if (data.error) throw new Error(data.error.message);
+
+    const fullText = data.content?.map(b => b.text || '').join('') || '';
+    conversationHistory.push({ role: 'assistant', content: fullText });
+
+    // Split main text and translation
+    const parts = fullText.split('---');
+    const spokenText = parts[0].trim();
+    const translationRaw = parts[1]?.trim() || null;
+    const translation = translationRaw?.replace(/^ES:\s*/i, '').trim() || null;
+
+    // Show in transcript
+    document.getElementById('transcript-agent').textContent = spokenText;
+    const transEl = document.getElementById('transcript-translation');
+    if (translation) {
+      transEl.textContent = '🇪🇸 ' + translation;
+      transEl.style.display = 'block';
+    } else {
+      transEl.style.display = 'none';
+    }
+    document.getElementById('transcript-user').textContent = '';
+
+    saveSession();
+    speakText(spokenText);
+  } catch (err) {
+    showError('Error: ' + err.message);
+    setOrbState('idle');
+    setStatus('Error — intenta de nuevo', '');
+    enableMic(true);
+  }
+}
+
+// ══ TTS ══
+let pendingSpeakText = null;
+let ttsUnlocked = false;
+
+function unlockTTS() {
+  ttsUnlocked = true;
+}
+
+function onTTSDone() {
+  if (!isAgentSpeaking) return;
+  isAgentSpeaking = false;
+  setOrbState('idle');
+  showListenBtn(false);
+
+  // Check if mic is usable
+  const micAvailable = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+  if (micAvailable && recognition) {
+    setStatus('Tu turno — presiona el micrófono 🎙', '');
+    enableMic(true);
+    const hint = document.getElementById('mic-hint');
+    if (hint) hint.textContent = 'Presiona 🎙 para hablar';
+  } else {
+    setStatus('Tu turno — escribe tu respuesta', '');
+    showTextFallback(true);
+  }
+}
+
+async function doSpeak(text) {
+  const meta = LANG_META[config.lang];
+  if (!meta) { onTTSDone(); return; }
+  const cleanText = text.replace(/[*_#`]/g, '').trim();
+  if (!cleanText) { onTTSDone(); return; }
+
+  // Stop any currently playing audio
+  if (currentUtterance) {
+    try { currentUtterance.pause(); currentUtterance.src = ''; } catch(e) {}
+    currentUtterance = null;
+  }
+
+  try {
+    const response = await fetch('/api/tts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: cleanText, lang: meta.ttsLang, pace: config.pace })
+    });
+
+    if (!response.ok) throw new Error('TTS error ' + response.status);
+
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const audio = new Audio(url);
+    currentUtterance = audio;
+
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      URL.revokeObjectURL(url);
+      onTTSDone();
+    };
+
+    audio.addEventListener('ended', finish);
+    audio.addEventListener('error', finish);
+
+    await audio.play();
+
+    // Watchdog: poll until audio finishes
+    const watchdog = setInterval(() => {
+      if (!audio || audio.ended || audio.paused || done) {
+        clearInterval(watchdog);
+        finish();
+      }
+    }, 500);
+
+    // Hard timeout
+    setTimeout(() => { clearInterval(watchdog); finish(); }, 60000);
+
+  } catch(err) {
+    console.error('ElevenLabs TTS error:', err);
+    onTTSDone();
+  }
+}
+
+function speakText(text) {
+  pendingSpeakText = text;
+  isAgentSpeaking = true;
+  setOrbState('speaking');
+  enableMic(false);
+
+  if (ttsUnlocked) {
+    setStatus('Hablando…', 'speaking');
+    showListenBtn(false);
+    doSpeak(text);
+  } else {
+    setStatus('Toca ▶ para escuchar', '');
+    showListenBtn(true);
+  }
+}
+
+function showListenBtn(show) {
+  const btn = document.getElementById('listen-btn');
+  if (btn) btn.style.display = show ? 'flex' : 'none';
+}
+
+// ══ STT ══
+function setupSpeechRecognition() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    setStatus('Sin soporte de voz — escribe tu respuesta', '');
+    showTextFallback(true);
+    enableMic(false);
+    return;
+  }
+
+  const meta = LANG_META[config.lang];
+  recognition = new SpeechRecognition();
+  recognition.lang = meta.sttLang;
+  recognition.continuous = false;
+  recognition.interimResults = true;
+  recognition.maxAlternatives = 1;
+
+  recognition.onstart = () => {
+    setOrbState('listening');
+    setStatus('Escuchando…', 'listening');
+    document.getElementById('transcript-user').textContent = '…';
+  };
+
+  recognition.onresult = (event) => {
+    let interim = '';
+    let final = '';
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const t = event.results[i][0].transcript;
+      if (event.results[i].isFinal) final += t;
+      else interim += t;
+    }
+    document.getElementById('transcript-user').textContent = final || interim || '…';
+  };
+
+  recognition.onend = () => {
+    const userEl = document.getElementById('transcript-user');
+    const micBtnEl = document.getElementById('mic-btn');
+    if (micBtnEl) micBtnEl.classList.remove('active');
+    const userText = userEl ? userEl.textContent.trim() : '';
+
+    if (userText && userText !== '…' && userText.length > 1) {
+      callAgent(userText);
+    } else {
+      setOrbState('idle');
+      setStatus('No te escuché — intenta de nuevo', '');
+      enableMic(true);
+    }
+  };
+
+  recognition.onerror = (event) => {
+    document.getElementById('mic-btn').classList.remove('active');
+    if (event.error === 'no-speech') {
+      setOrbState('idle');
+      setStatus('No te escuché — intenta de nuevo', '');
+      enableMic(true);
+    } else if (event.error === 'not-allowed') {
+      setOrbState('idle');
+      setStatus('Sin micrófono — escribe tu respuesta', '');
+      showTextFallback(true);
+      enableMic(false);
+    } else {
+      setOrbState('idle');
+      setStatus('Error de voz — intenta de nuevo', '');
+      enableMic(true);
+    }
+  };
+}
+
+// Mic button — tap to speak
+const micBtn = document.getElementById('mic-btn');
+micBtn.addEventListener('click', () => {
+  unlockTTS();
+  if (isAgentSpeaking) return;
+  if (!recognition) return;
+
+  hideError();
+  try {
+    recognition.start();
+    micBtn.classList.add('active');
+    enableMic(false);
+  } catch(e) {
+    // already running
+  }
+});
+
+// ══ KICKOFF ══
+async function kickoffConversation(isContinuing = false) {
+  const agentEl = document.getElementById('transcript-agent');
+  if (isContinuing) {
+    // Show last agent message from history
+    const lastAgent = [...conversationHistory].reverse().find(m => m.role === 'assistant');
+    if (agentEl) agentEl.textContent = lastAgent ? lastAgent.content.split('---')[0].trim() : '…';
+    setOrbState('idle');
+    setStatus('Tu turno — presiona el micrófono 🎙', '');
+    enableMic(true);
+  } else {
+    if (agentEl) agentEl.textContent = '…';
+    conversationHistory.push({ role: 'user', content: 'Please begin the conversation now with a warm greeting.' });
+    await callAgent(null);
+  }
+}
+
+// ══ LISTEN TAP ══
+function onListenTap() {
+  unlockTTS();
+  showListenBtn(false);
+  if (pendingSpeakText) doSpeak(pendingSpeakText);
+}
+
+// ══ TEXT FALLBACK ══
+function showTextFallback(show) {
+  const el = document.getElementById('text-fallback');
+  const micSection = document.querySelector('.mic-section');
+  if (el) el.style.display = show ? 'flex' : 'none';
+  if (micSection) micSection.style.display = show ? 'none' : 'flex';
+}
+
+function sendTextFallback() {
+  const ta = document.getElementById('text-input');
+  if (!ta) return;
+  const text = ta.value.trim();
+  if (!text) return;
+  ta.value = '';
+  showTextFallback(false);
+  const userEl = document.getElementById('transcript-user');
+  if (userEl) userEl.textContent = text;
+  callAgent(text);
+}
+
+// Allow Enter key in text fallback
+document.addEventListener('DOMContentLoaded', () => {
+  const ta = document.getElementById('text-input');
+  if (ta) {
+    ta.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendTextFallback(); }
+    });
+  }
+});
+
+// ══ UI HELPERS ══
+function setOrbState(state) {
+  const wrap = document.getElementById('orb-wrap');
+  wrap.className = 'orb-wrap ' + (state !== 'idle' ? state : '');
+}
+
+function setStatus(text, cls) {
+  const el = document.getElementById('status-label');
+  el.textContent = text;
+  el.className = 'status-label ' + (cls || '');
+}
+
+function enableMic(enabled) {
+  const btn = document.getElementById('mic-btn');
+  btn.disabled = !enabled;
+  document.getElementById('mic-hint').textContent = enabled
+    ? 'Presiona 🎙 para hablar'
+    : (isAgentSpeaking ? 'Espera a que termine…' : '');
+}
+
+function showError(msg) {
+  const el = document.getElementById('error-banner');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function hideError() {
+  document.getElementById('error-banner').style.display = 'none';
+}
+</script>
+</body>
+</html>
