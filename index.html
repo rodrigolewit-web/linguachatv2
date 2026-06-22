@@ -1061,21 +1061,31 @@ function showListenBtn(show) {
 }
 
 // ══ STT ══
+const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
 function setupSpeechRecognition() {
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRecognition) {
+  if (!SpeechRecognitionAPI) {
     setStatus('Sin soporte de voz — escribe tu respuesta', '');
     showTextFallback(true);
     enableMic(false);
-    return;
   }
+  // On iOS we create a fresh instance on every tap — nothing to set up here
+}
 
+function startListening() {
+  if (!SpeechRecognitionAPI) return;
+
+  // Always create a new instance (required on iOS Safari)
+  if (recognition) { try { recognition.abort(); } catch(e) {} }
   const meta = LANG_META[config.lang];
-  recognition = new SpeechRecognition();
+  recognition = new SpeechRecognitionAPI();
   recognition.lang = meta.sttLang;
   recognition.continuous = false;
-  recognition.interimResults = true;
+  recognition.interimResults = !isIOS; // iOS doesn't support interimResults reliably
   recognition.maxAlternatives = 1;
+
+  let capturedText = '';
 
   recognition.onstart = () => {
     setOrbState('listening');
@@ -1091,14 +1101,16 @@ function setupSpeechRecognition() {
       if (event.results[i].isFinal) final += t;
       else interim += t;
     }
-    document.getElementById('transcript-user').textContent = final || interim || '…';
+    capturedText = final || interim || capturedText;
+    document.getElementById('transcript-user').textContent = capturedText || '…';
   };
 
   recognition.onend = () => {
-    const userEl = document.getElementById('transcript-user');
     const micBtnEl = document.getElementById('mic-btn');
     if (micBtnEl) micBtnEl.classList.remove('active');
-    const userText = userEl ? userEl.textContent.trim() : '';
+    // On iOS, also read from transcript element as fallback
+    const elText = document.getElementById('transcript-user').textContent.trim();
+    const userText = (capturedText || elText || '').trim();
 
     if (userText && userText !== '…' && userText.length > 1) {
       callAgent(userText);
@@ -1126,6 +1138,14 @@ function setupSpeechRecognition() {
       enableMic(true);
     }
   };
+
+  try {
+    recognition.start();
+  } catch(e) {
+    setOrbState('idle');
+    setStatus('Error al iniciar micrófono — intenta de nuevo', '');
+    enableMic(true);
+  }
 }
 
 // Mic button — tap to speak
@@ -1133,16 +1153,11 @@ const micBtn = document.getElementById('mic-btn');
 micBtn.addEventListener('click', () => {
   unlockTTS();
   if (isAgentSpeaking) return;
-  if (!recognition) return;
 
   hideError();
-  try {
-    recognition.start();
-    micBtn.classList.add('active');
-    enableMic(false);
-  } catch(e) {
-    // already running
-  }
+  micBtn.classList.add('active');
+  enableMic(false);
+  startListening();
 });
 
 // ══ KICKOFF ══
