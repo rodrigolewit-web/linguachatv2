@@ -494,6 +494,10 @@
         <span class="player-dot">👦</span>Ro
         <span class="player-badge" id="badge-Ro">●</span>
       </button>
+      <button class="player-btn" onclick="selectPlayer('Kri')">
+        <span class="player-dot">👩</span>Kri
+        <span class="player-badge" id="badge-Kri">●</span>
+      </button>
     </div>
   </div>
 </div>
@@ -657,7 +661,7 @@ function clearSession() {
 
 function showPlayerScreen() {
   // Show badge for players that have saved history
-  ['Ju','Sari','Ro'].forEach(p => {
+  ['Ju','Sari','Ro','Kri'].forEach(p => {
     const saved = loadSession(p);
     const badge = document.getElementById(`badge-${p}`);
     if (badge) badge.parentElement.classList.toggle('has-history', !!saved);
