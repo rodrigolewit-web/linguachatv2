@@ -204,6 +204,69 @@
     background: none; border: none; padding: 4px 12px;
   }
 
+  /* ══ HISTORY ══ */
+  #history-screen {
+    display: none; flex-direction: column; flex: 1;
+    padding: 1rem; overflow-y: auto; gap: 1rem;
+  }
+  .history-header {
+    display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.25rem;
+  }
+  .history-back {
+    background: none; border: 1px solid var(--border); color: var(--muted);
+    border-radius: 8px; padding: 6px 12px; cursor: pointer; font-size: 0.85rem;
+  }
+  .history-title { font-size: 1.1rem; font-weight: 600; }
+  .history-tabs {
+    display: flex; gap: 8px; border-bottom: 1px solid var(--border); padding-bottom: 0;
+  }
+  .htab {
+    padding: 8px 16px; font-size: 0.85rem; font-weight: 500; cursor: pointer;
+    border: none; background: none; color: var(--muted); border-bottom: 2px solid transparent;
+    margin-bottom: -1px; transition: all 0.15s;
+  }
+  .htab.active { color: var(--accent-fr); border-bottom-color: var(--accent-fr); }
+  .htab-content { display: none; flex-direction: column; gap: 0.85rem; padding-top: 0.5rem; }
+  .htab-content.active { display: flex; }
+  .h-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 1rem;
+  }
+  .h-card-title {
+    font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 0.6rem;
+  }
+  .h-summary { font-size: 0.9rem; line-height: 1.6; color: var(--text); }
+  .h-item { padding: 0.6rem 0; border-bottom: 1px solid var(--border); font-size: 0.85rem; line-height: 1.5; }
+  .h-item:last-child { border-bottom: none; padding-bottom: 0; }
+  .h-mistake { color: #f87171; font-weight: 600; }
+  .h-correction { color: #4ade80; font-weight: 600; }
+  .h-expl { color: var(--muted); font-size: 0.8rem; margin-top: 2px; }
+  .h-word { color: var(--accent-en); font-weight: 600; }
+  .h-meaning { color: var(--muted); font-size: 0.8rem; }
+  .h-phrase { color: var(--accent-fr); font-weight: 500; }
+  .h-pill {
+    display: inline-block; padding: 4px 10px; border-radius: 20px;
+    font-size: 0.78rem; margin: 3px 3px 0 0;
+  }
+  .h-pill.good { background: rgba(74,222,128,0.12); color: #4ade80; }
+  .h-pill.bad  { background: rgba(248,113,113,0.12); color: #f87171; }
+  .conv-msg { padding: 0.5rem 0; border-bottom: 1px solid var(--border); font-size: 0.82rem; line-height: 1.5; }
+  .conv-msg:last-child { border-bottom: none; }
+  .conv-role { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 2px; }
+  .conv-role.user { color: var(--accent-en); }
+  .conv-role.agent { color: var(--accent-fr); }
+  .conv-text { color: var(--text); }
+  .h-loading { text-align: center; color: var(--muted); padding: 2rem; font-size: 0.9rem; }
+  .h-empty { text-align: center; color: var(--muted); padding: 2rem; font-size: 0.88rem; }
+  .history-player-btn {
+    position: absolute; top: 6px; left: 6px;
+    font-size: 0.65rem; background: none; border: none;
+    color: var(--muted); cursor: pointer; padding: 0; line-height: 1;
+    opacity: 0.6; transition: opacity 0.15s;
+  }
+  .history-player-btn:hover { opacity: 1; }
+
   /* ══ SETUP ══ */
   #setup-screen {
     flex: 1;
@@ -531,30 +594,35 @@
         <span class="player-dot" id="avatar-Ju">👩</span>Ju
         <span class="player-badge" id="badge-Ju">●</span>
         <span class="player-stats" id="stats-Ju"></span>
+        <button class="history-player-btn" onclick="event.stopPropagation();openHistory('Ju')">📚</button>
         <button class="player-edit-btn" onclick="event.stopPropagation();openAvatarPicker('Ju')">✏️</button>
       </button>
       <button class="player-btn" onclick="selectPlayer('Sari')">
         <span class="player-dot" id="avatar-Sari">👧</span>Sari
         <span class="player-badge" id="badge-Sari">●</span>
         <span class="player-stats" id="stats-Sari"></span>
+        <button class="history-player-btn" onclick="event.stopPropagation();openHistory('Sari')">📚</button>
         <button class="player-edit-btn" onclick="event.stopPropagation();openAvatarPicker('Sari')">✏️</button>
       </button>
       <button class="player-btn" onclick="selectPlayer('Ro')">
         <span class="player-dot" id="avatar-Ro">👦</span>Ro
         <span class="player-badge" id="badge-Ro">●</span>
         <span class="player-stats" id="stats-Ro"></span>
+        <button class="history-player-btn" onclick="event.stopPropagation();openHistory('Ro')">📚</button>
         <button class="player-edit-btn" onclick="event.stopPropagation();openAvatarPicker('Ro')">✏️</button>
       </button>
       <button class="player-btn" onclick="selectPlayer('Kri')">
         <span class="player-dot" id="avatar-Kri">👩</span>Kri
         <span class="player-badge" id="badge-Kri">●</span>
         <span class="player-stats" id="stats-Kri"></span>
+        <button class="history-player-btn" onclick="event.stopPropagation();openHistory('Kri')">📚</button>
         <button class="player-edit-btn" onclick="event.stopPropagation();openAvatarPicker('Kri')">✏️</button>
       </button>
       <button class="player-btn" onclick="selectPlayer('Ali')">
         <span class="player-dot" id="avatar-Ali">👧</span>Ali
         <span class="player-badge" id="badge-Ali">●</span>
         <span class="player-stats" id="stats-Ali"></span>
+        <button class="history-player-btn" onclick="event.stopPropagation();openHistory('Ali')">📚</button>
         <button class="player-edit-btn" onclick="event.stopPropagation();openAvatarPicker('Ali')">✏️</button>
       </button>
       <button class="player-btn" onclick="selectPlayer('Invitado')">
@@ -573,6 +641,24 @@
     <h3>Elegí tu avatar</h3>
     <div class="avatar-grid" id="avatar-grid"></div>
     <button class="avatar-close" onclick="closeAvatarPicker()">Cerrar</button>
+  </div>
+</div>
+
+<!-- ══ HISTORY SCREEN ══ -->
+<div id="history-screen">
+  <div class="history-header">
+    <button class="history-back" onclick="closeHistory()">← Volver</button>
+    <span class="history-title" id="history-title">Mi progreso</span>
+  </div>
+  <div class="history-tabs">
+    <button class="htab active" onclick="switchHTab('analysis')">🧠 Análisis IA</button>
+    <button class="htab" onclick="switchHTab('conversation')">💬 Conversación</button>
+  </div>
+  <div class="htab-content active" id="htab-analysis">
+    <div class="h-loading" id="h-loading">Analizando tu sesión…</div>
+  </div>
+  <div class="htab-content" id="htab-conversation">
+    <div id="h-conv-list"></div>
   </div>
 </div>
 
@@ -734,6 +820,146 @@ function clearSession() {
   if (!currentPlayer) return;
   localStorage.removeItem(`lc_config_${currentPlayer}`);
   localStorage.removeItem(`lc_history_${currentPlayer}`);
+}
+
+// ══ HISTORY ══
+let historyPlayer = null;
+let currentHTab = 'analysis';
+
+function openHistory(player) {
+  const saved = loadSession(player);
+  historyPlayer = player;
+  currentHTab = 'analysis';
+  document.getElementById('history-title').textContent = `${getAvatar(player)} ${player} — Mi progreso`;
+  document.getElementById('player-screen').style.display = 'none';
+  document.getElementById('history-screen').style.display = 'flex';
+  switchHTab('analysis');
+
+  if (!saved || !saved.history || saved.history.length < 2) {
+    document.getElementById('h-loading').innerHTML = '<div class="h-empty">Todavía no hay conversaciones guardadas para ' + player + '.<br>¡Empezá a practicar para ver tu progreso!</div>';
+    renderConversation([]);
+    return;
+  }
+
+  renderConversation(saved.history);
+  analyzeHistory(saved.history, saved.config);
+}
+
+function closeHistory() {
+  document.getElementById('history-screen').style.display = 'none';
+  document.getElementById('player-screen').style.display = 'flex';
+  historyPlayer = null;
+}
+
+function switchHTab(tab) {
+  currentHTab = tab;
+  document.querySelectorAll('.htab').forEach((b, i) => b.classList.toggle('active', (i === 0 && tab === 'analysis') || (i === 1 && tab === 'conversation')));
+  document.getElementById('htab-analysis').classList.toggle('active', tab === 'analysis');
+  document.getElementById('htab-conversation').classList.toggle('active', tab === 'conversation');
+}
+
+function renderConversation(history) {
+  const el = document.getElementById('h-conv-list');
+  if (!history.length) { el.innerHTML = '<div class="h-empty">Sin conversaciones aún.</div>'; return; }
+  el.innerHTML = history.map(m => {
+    const isUser = m.role === 'user';
+    const text = (m.content || '').split('---')[0].trim();
+    if (!text || text === 'Please begin the conversation now with a warm greeting.') return '';
+    return `<div class="conv-msg">
+      <div class="conv-role ${isUser ? 'user' : 'agent'}">${isUser ? '🎙 Tú' : '🤖 Tutor'}</div>
+      <div class="conv-text">${text}</div>
+    </div>`;
+  }).join('');
+}
+
+async function analyzeHistory(history, cfg) {
+  document.getElementById('h-loading').innerHTML = '<div class="h-loading">🧠 Analizando tu sesión con IA…</div>';
+
+  const lang = cfg?.lang || 'en';
+  const langNames = { en: 'English', fr: 'Français', pt: 'Português' };
+  const langName = langNames[lang] || 'English';
+
+  const transcript = history
+    .filter(m => m.content && m.content !== 'Please begin the conversation now with a warm greeting.')
+    .map(m => `${m.role === 'user' ? 'ESTUDIANTE' : 'TUTOR'}: ${m.content.split('---')[0].trim()}`)
+    .join('\n');
+
+  const systemPrompt = `Sos un experto analizador de sesiones de aprendizaje de idiomas. Se te dará la transcripción de una conversación de práctica en ${langName}.
+Analizá en profundidad y respondé ÚNICAMENTE con un JSON válido con esta estructura exacta (sin texto extra, sin markdown):
+{
+  "summary": "Resumen breve de la sesión en español (2-3 oraciones)",
+  "errors": [{"mistake": "el error cometido", "correction": "la forma correcta", "explanation": "por qué en español"}],
+  "vocabulary": [{"word": "palabra o frase en ${langName}", "meaning": "significado en español", "example": "ejemplo de uso"}],
+  "phrases": [{"phrase": "frase útil en ${langName}", "meaning": "traducción al español"}],
+  "strengths": ["fortaleza 1 en español", "fortaleza 2"],
+  "improve": ["área a mejorar 1 en español", "área a mejorar 2"]
+}
+Si no hay errores, vocabulary, etc., devolvé arrays vacíos. Máximo 5 items por array.`;
+
+  try {
+    const res = await fetch('/api/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        system: systemPrompt,
+        messages: [{ role: 'user', content: transcript }]
+      })
+    });
+    const data = await res.json();
+    const raw = data?.content?.[0]?.text || '';
+    const parsed = JSON.parse(raw);
+    renderAnalysis(parsed);
+  } catch(e) {
+    document.getElementById('h-loading').innerHTML = '<div class="h-empty">No se pudo analizar la sesión. Intentá más tarde.</div>';
+  }
+}
+
+function renderAnalysis(d) {
+  const el = document.getElementById('htab-analysis');
+  el.innerHTML = '';
+
+  // Summary
+  if (d.summary) {
+    el.innerHTML += `<div class="h-card"><div class="h-card-title">📋 Resumen de la sesión</div><div class="h-summary">${d.summary}</div></div>`;
+  }
+
+  // Errors
+  if (d.errors?.length) {
+    const items = d.errors.map(e => `<div class="h-item">
+      <span class="h-mistake">✗ ${e.mistake}</span> → <span class="h-correction">✓ ${e.correction}</span>
+      <div class="h-expl">${e.explanation}</div>
+    </div>`).join('');
+    el.innerHTML += `<div class="h-card"><div class="h-card-title">⚠️ Errores y correcciones</div>${items}</div>`;
+  }
+
+  // Vocabulary
+  if (d.vocabulary?.length) {
+    const items = d.vocabulary.map(v => `<div class="h-item">
+      <span class="h-word">${v.word}</span> — <span class="h-meaning">${v.meaning}</span>
+      ${v.example ? `<div class="h-expl">Ej: ${v.example}</div>` : ''}
+    </div>`).join('');
+    el.innerHTML += `<div class="h-card"><div class="h-card-title">📖 Vocabulario aprendido</div>${items}</div>`;
+  }
+
+  // Phrases
+  if (d.phrases?.length) {
+    const items = d.phrases.map(p => `<div class="h-item">
+      <span class="h-phrase">"${p.phrase}"</span>
+      <div class="h-expl">${p.meaning}</div>
+    </div>`).join('');
+    el.innerHTML += `<div class="h-card"><div class="h-card-title">💬 Frases útiles</div>${items}</div>`;
+  }
+
+  // Strengths & improve
+  if (d.strengths?.length || d.improve?.length) {
+    const s = (d.strengths || []).map(x => `<span class="h-pill good">✓ ${x}</span>`).join('');
+    const i = (d.improve || []).map(x => `<span class="h-pill bad">↗ ${x}</span>`).join('');
+    el.innerHTML += `<div class="h-card"><div class="h-card-title">📊 Tu desempeño</div>${s}${i}</div>`;
+  }
+
+  if (!el.innerHTML) {
+    el.innerHTML = '<div class="h-empty">No se encontraron datos suficientes para analizar.</div>';
+  }
 }
 
 // ══ AVATAR ══
