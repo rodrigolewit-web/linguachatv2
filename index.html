@@ -217,6 +217,17 @@
     font-size: 0.85rem; color: var(--muted); cursor: pointer;
     background: none; border: none; padding: 4px 12px;
   }
+  .acat-tabs {
+    display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 0.75rem; justify-content: center;
+  }
+  .acat-tab {
+    font-size: 0.72rem; padding: 4px 10px; border-radius: 20px; cursor: pointer;
+    border: 1px solid var(--border); background: none; color: var(--muted); transition: all 0.15s;
+  }
+  .acat-tab.active { background: var(--accent-fr); color: #0e0f14; border-color: var(--accent-fr); font-weight: 600; }
+  .avatar-grids { max-height: 220px; overflow-y: auto; }
+  .avatar-cat-grid { display: none; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+  .avatar-cat-grid.active { display: grid; }
 
   /* ══ HISTORY ══ */
   #history-screen {
@@ -663,11 +674,7 @@
 
 <!-- ══ AVATAR PICKER MODAL ══ -->
 <div id="avatar-modal">
-  <div class="avatar-card">
-    <h3>Elegí tu avatar</h3>
-    <div class="avatar-grid" id="avatar-grid"></div>
-    <button class="avatar-close" onclick="closeAvatarPicker()">Cerrar</button>
-  </div>
+  <div class="avatar-card" id="avatar-card-inner"></div>
 </div>
 
 <!-- ══ HISTORY SCREEN ══ -->
@@ -995,6 +1002,14 @@ const AVATAR_EMOJIS = [
   '🦸','🦹','🧙','🧝','🧛','🧟','🐶','🐱','🦊','🐻','🐼','🐨',
   '🦁','🐯','🐸','🐙','🦋','🌸','⭐','🔥','💎','🎭'
 ];
+
+const AVATAR_CATEGORIES = [
+  { label: '🧑 Personas', emojis: ['👩','👧','👦','👨','🧒','🧑','👴','👵','👱','🧔','🧕','🙋','🤷','🤦','🧖','🏊','🚴','🤸','🧘','🥳','🤩','😎','🥸','🤓'] },
+  { label: '🦸 Héroes & Roles', emojis: ['🦸','🦹','🧙','🧝','🧜','🧚','🧞','🧛','🧟','🧌','👼','🎅','🤶','🧑‍🚀','🥷','👮','💂','🕵️','👷','🧑‍⚕️','👨‍🍳','🧑‍🎤','🧑‍🎨','🧑‍✈️','👨‍🔬'] },
+  { label: '🐶 Animales', emojis: ['🐶','🐱','🦊','🐻','🐼','🐨','🦁','🐯','🐸','🐵','🐮','🐷','🐔','🐧','🦅','🦉','🦇','🐺','🐗','🦝','🦦','🦥','🐿️','🦔','🐇','🦘','🦒','🦓','🐘','🦕','🦖','🦜','🦩','🦚','🐬','🦈','🐙','🦋'] },
+  { label: '👾 Fantasy & Raros', emojis: ['👾','🤖','👽','👻','💀','☠️','🎃','🤡','💩','👹','👺','🎭','👁️','🧠','🔮','🎱','🪄','🧿','🃏','🀄','🫠','🫣','🫡','🥴','🤯','🤬','😈','👿'] },
+  { label: '🌈 Cosas divertidas', emojis: ['🌈','⭐','🔥','💎','🌊','🍕','🍦','🍩','🎮','🎸','🎺','🥁','🎤','🎧','🎨','🚀','🛸','🪐','💫','🌙','☀️','⚡','🌺','🌸','🍀','🎄','🌵','🌴','🏆','💣','🎯','🪩','🎪','🎠'] },
+];
 const DEFAULT_AVATARS = { Ju:'👩', Sari:'👧', Ro:'👦', Kri:'👩', Ali:'👧', Invitado:'🧑' };
 let avatarPickerPlayer = null;
 
@@ -1005,16 +1020,32 @@ function getAvatar(player) {
 function openAvatarPicker(player) {
   avatarPickerPlayer = player;
   const current = getAvatar(player);
-  const grid = document.getElementById('avatar-grid');
-  grid.innerHTML = '';
-  AVATAR_EMOJIS.forEach(emoji => {
-    const btn = document.createElement('button');
-    btn.className = 'avatar-opt' + (emoji === current ? ' selected' : '');
-    btn.textContent = emoji;
-    btn.onclick = () => selectAvatar(emoji);
-    grid.appendChild(btn);
-  });
-  document.getElementById('avatar-modal').classList.add('open');
+  const modal = document.getElementById('avatar-modal');
+
+  // Build tabs + grids
+  const tabsHtml = AVATAR_CATEGORIES.map((cat, i) =>
+    `<button class="acat-tab${i === 0 ? ' active' : ''}" onclick="switchAvatarCat(${i})">${cat.label}</button>`
+  ).join('');
+
+  const gridsHtml = AVATAR_CATEGORIES.map((cat, i) => {
+    const btns = cat.emojis.map(e =>
+      `<button class="avatar-opt${e === current ? ' selected' : ''}" onclick="selectAvatar('${e}')">${e}</button>`
+    ).join('');
+    return `<div class="avatar-cat-grid${i === 0 ? ' active' : ''}" id="acat-${i}">${btns}</div>`;
+  }).join('');
+
+  document.getElementById('avatar-card-inner').innerHTML = `
+    <h3>Elegí tu avatar</h3>
+    <div class="acat-tabs">${tabsHtml}</div>
+    <div class="avatar-grids">${gridsHtml}</div>
+    <button class="avatar-close" onclick="closeAvatarPicker()">Cerrar</button>
+  `;
+  modal.classList.add('open');
+}
+
+function switchAvatarCat(idx) {
+  document.querySelectorAll('.acat-tab').forEach((t, i) => t.classList.toggle('active', i === idx));
+  document.querySelectorAll('.avatar-cat-grid').forEach((g, i) => g.classList.toggle('active', i === idx));
 }
 
 function selectAvatar(emoji) {
