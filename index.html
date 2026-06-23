@@ -166,6 +166,43 @@
   }
   .player-btn.has-history .player-badge { display: block; }
   .player-stats { display: block; font-size: 0.65rem; color: var(--muted); margin-top: 4px; line-height: 1.4; }
+  .player-edit-btn {
+    position: absolute; bottom: 5px; right: 6px;
+    font-size: 0.65rem; background: none; border: none;
+    color: var(--muted); cursor: pointer; padding: 0; line-height: 1;
+    opacity: 0.6; transition: opacity 0.15s;
+  }
+  .player-edit-btn:hover { opacity: 1; }
+
+  /* ══ AVATAR PICKER ══ */
+  #avatar-modal {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7); z-index: 999;
+    align-items: center; justify-content: center;
+  }
+  #avatar-modal.open { display: flex; }
+  .avatar-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; padding: 1.25rem; max-width: 320px; width: 90%;
+    text-align: center;
+  }
+  .avatar-card h3 { margin-bottom: 1rem; font-size: 1rem; color: var(--text); }
+  .avatar-grid {
+    display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px;
+    margin-bottom: 1rem;
+  }
+  .avatar-opt {
+    font-size: 1.6rem; cursor: pointer; border-radius: 8px;
+    padding: 4px; border: 2px solid transparent;
+    transition: border-color 0.15s, background 0.15s;
+    background: none;
+  }
+  .avatar-opt:hover { background: var(--surface2); }
+  .avatar-opt.selected { border-color: var(--accent-fr); }
+  .avatar-close {
+    font-size: 0.85rem; color: var(--muted); cursor: pointer;
+    background: none; border: none; padding: 4px 12px;
+  }
 
   /* ══ SETUP ══ */
   #setup-screen {
@@ -491,36 +528,51 @@
     <h2>¿Quién juega?</h2>
     <div class="player-grid">
       <button class="player-btn" onclick="selectPlayer('Ju')">
-        <span class="player-dot">👩</span>Ju
+        <span class="player-dot" id="avatar-Ju">👩</span>Ju
         <span class="player-badge" id="badge-Ju">●</span>
         <span class="player-stats" id="stats-Ju"></span>
+        <button class="player-edit-btn" onclick="event.stopPropagation();openAvatarPicker('Ju')">✏️</button>
       </button>
       <button class="player-btn" onclick="selectPlayer('Sari')">
-        <span class="player-dot">👧</span>Sari
+        <span class="player-dot" id="avatar-Sari">👧</span>Sari
         <span class="player-badge" id="badge-Sari">●</span>
         <span class="player-stats" id="stats-Sari"></span>
+        <button class="player-edit-btn" onclick="event.stopPropagation();openAvatarPicker('Sari')">✏️</button>
       </button>
       <button class="player-btn" onclick="selectPlayer('Ro')">
-        <span class="player-dot">👦</span>Ro
+        <span class="player-dot" id="avatar-Ro">👦</span>Ro
         <span class="player-badge" id="badge-Ro">●</span>
         <span class="player-stats" id="stats-Ro"></span>
+        <button class="player-edit-btn" onclick="event.stopPropagation();openAvatarPicker('Ro')">✏️</button>
       </button>
       <button class="player-btn" onclick="selectPlayer('Kri')">
-        <span class="player-dot">👩</span>Kri
+        <span class="player-dot" id="avatar-Kri">👩</span>Kri
         <span class="player-badge" id="badge-Kri">●</span>
         <span class="player-stats" id="stats-Kri"></span>
+        <button class="player-edit-btn" onclick="event.stopPropagation();openAvatarPicker('Kri')">✏️</button>
       </button>
       <button class="player-btn" onclick="selectPlayer('Ali')">
-        <span class="player-dot">👧</span>Ali
+        <span class="player-dot" id="avatar-Ali">👧</span>Ali
         <span class="player-badge" id="badge-Ali">●</span>
         <span class="player-stats" id="stats-Ali"></span>
+        <button class="player-edit-btn" onclick="event.stopPropagation();openAvatarPicker('Ali')">✏️</button>
       </button>
       <button class="player-btn" onclick="selectPlayer('Invitado')">
-        <span class="player-dot">🧑</span>Invitado
+        <span class="player-dot" id="avatar-Invitado">🧑</span>Invitado
         <span class="player-badge" id="badge-Invitado">●</span>
         <span class="player-stats" id="stats-Invitado"></span>
+        <button class="player-edit-btn" onclick="event.stopPropagation();openAvatarPicker('Invitado')">✏️</button>
       </button>
     </div>
+  </div>
+</div>
+
+<!-- ══ AVATAR PICKER MODAL ══ -->
+<div id="avatar-modal">
+  <div class="avatar-card">
+    <h3>Elegí tu avatar</h3>
+    <div class="avatar-grid" id="avatar-grid"></div>
+    <button class="avatar-close" onclick="closeAvatarPicker()">Cerrar</button>
   </div>
 </div>
 
@@ -684,6 +736,55 @@ function clearSession() {
   localStorage.removeItem(`lc_history_${currentPlayer}`);
 }
 
+// ══ AVATAR ══
+const AVATAR_EMOJIS = [
+  '👩','👧','👦','👨','🧒','🧑','👴','👵','🧓','👱','🧔','🧕',
+  '👮','👷','💂','🕵️','👩‍⚕️','👨‍⚕️','👩‍🎓','👨‍🎓','👩‍🎤','👨‍🎤',
+  '🦸','🦹','🧙','🧝','🧛','🧟','🐶','🐱','🦊','🐻','🐼','🐨',
+  '🦁','🐯','🐸','🐙','🦋','🌸','⭐','🔥','💎','🎭'
+];
+const DEFAULT_AVATARS = { Ju:'👩', Sari:'👧', Ro:'👦', Kri:'👩', Ali:'👧', Invitado:'🧑' };
+let avatarPickerPlayer = null;
+
+function getAvatar(player) {
+  return localStorage.getItem(`lc_avatar_${player}`) || DEFAULT_AVATARS[player] || '🧑';
+}
+
+function openAvatarPicker(player) {
+  avatarPickerPlayer = player;
+  const current = getAvatar(player);
+  const grid = document.getElementById('avatar-grid');
+  grid.innerHTML = '';
+  AVATAR_EMOJIS.forEach(emoji => {
+    const btn = document.createElement('button');
+    btn.className = 'avatar-opt' + (emoji === current ? ' selected' : '');
+    btn.textContent = emoji;
+    btn.onclick = () => selectAvatar(emoji);
+    grid.appendChild(btn);
+  });
+  document.getElementById('avatar-modal').classList.add('open');
+}
+
+function selectAvatar(emoji) {
+  if (!avatarPickerPlayer) return;
+  localStorage.setItem(`lc_avatar_${avatarPickerPlayer}`, emoji);
+  const el = document.getElementById(`avatar-${avatarPickerPlayer}`);
+  if (el) el.textContent = emoji;
+  closeAvatarPicker();
+}
+
+function closeAvatarPicker() {
+  document.getElementById('avatar-modal').classList.remove('open');
+  avatarPickerPlayer = null;
+}
+
+function loadAllAvatars() {
+  Object.keys(DEFAULT_AVATARS).forEach(p => {
+    const el = document.getElementById(`avatar-${p}`);
+    if (el) el.textContent = getAvatar(p);
+  });
+}
+
 // ══ STATS ══
 let sessionStart = null;
 
@@ -729,6 +830,7 @@ function renderStats(player) {
 
 function showPlayerScreen() {
   accumulateTime();
+  loadAllAvatars();
   ['Ju','Sari','Ro','Kri','Ali','Invitado'].forEach(p => {
     const saved = p !== 'Invitado' ? loadSession(p) : null;
     const badge = document.getElementById(`badge-${p}`);
