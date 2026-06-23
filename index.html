@@ -291,6 +291,21 @@
     opacity: 0.6; transition: opacity 0.15s;
   }
   .history-player-btn:hover { opacity: 1; }
+  #history-player-switcher {
+    display: flex; gap: 8px; overflow-x: auto; padding: 4px 0 8px;
+    scrollbar-width: none;
+  }
+  #history-player-switcher::-webkit-scrollbar { display: none; }
+  .hps-btn {
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    background: var(--surface); border: 1.5px solid var(--border);
+    border-radius: 12px; padding: 6px 10px; cursor: pointer;
+    font-size: 0.72rem; color: var(--muted); white-space: nowrap;
+    transition: all 0.15s; flex-shrink: 0;
+  }
+  .hps-btn .hps-avatar { font-size: 1.4rem; line-height: 1; }
+  .hps-btn.active { border-color: var(--accent-fr); color: var(--accent-fr); background: rgba(192,132,252,0.08); }
+  .hps-btn:hover { border-color: var(--accent-fr); }
 
   /* ══ SETUP ══ */
   #setup-screen {
@@ -683,6 +698,7 @@
     <button class="history-back" onclick="closeHistory()">← Volver</button>
     <span class="history-title" id="history-title">Mi progreso</span>
   </div>
+  <div id="history-player-switcher"></div>
   <div class="history-tabs">
     <button class="htab active" onclick="switchHTab('analysis')">🧠 Análisis IA</button>
     <button class="htab" onclick="switchHTab('conversation')">💬 Conversación</button>
@@ -860,13 +876,25 @@ function clearSession() {
 let historyPlayer = null;
 let currentHTab = 'analysis';
 
+const HISTORY_PLAYERS = ['Ju','Sari','Ro','Kri','Ali'];
+
+function renderPlayerSwitcher(activePlayer) {
+  const el = document.getElementById('history-player-switcher');
+  el.innerHTML = HISTORY_PLAYERS.map(p =>
+    `<button class="hps-btn${p === activePlayer ? ' active' : ''}" onclick="openHistory('${p}')">
+      <span class="hps-avatar">${getAvatar(p)}</span>${p}
+    </button>`
+  ).join('');
+}
+
 function openHistory(player) {
   const saved = loadSession(player);
   historyPlayer = player;
   currentHTab = 'analysis';
-  document.getElementById('history-title').textContent = `${getAvatar(player)} ${player} — Mi progreso`;
+  document.getElementById('history-title').textContent = 'Mi progreso';
   document.getElementById('player-screen').style.display = 'none';
   document.getElementById('history-screen').style.display = 'flex';
+  renderPlayerSwitcher(player);
   switchHTab('analysis');
 
   if (!saved || !saved.history || saved.history.length < 2) {
