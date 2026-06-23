@@ -148,10 +148,24 @@
     position: relative;
   }
   .player-btn:hover { border-color: var(--accent-fr); background: rgba(192,132,252,0.1); color: var(--accent-fr); }
+  .avatar-wrapper {
+    position: relative;
+    display: inline-block;
+    margin-bottom: 0.3rem;
+    cursor: pointer;
+  }
+  .avatar-wrapper:hover .avatar-edit-hint { opacity: 1; }
+  .avatar-edit-hint {
+    position: absolute; bottom: -4px; right: -6px;
+    background: var(--accent-fr); color: #0e0f14;
+    font-size: 0.55rem; border-radius: 50%;
+    width: 16px; height: 16px;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0.85; transition: opacity 0.15s; pointer-events: none;
+  }
   .player-btn .player-dot {
     display: block;
     font-size: 1.8rem;
-    margin-bottom: 0.3rem;
   }
   .player-btn .player-badge {
     position: absolute;
@@ -591,45 +605,57 @@
     <h2>¿Quién juega?</h2>
     <div class="player-grid">
       <button class="player-btn" onclick="selectPlayer('Ju')">
-        <span class="player-dot" id="avatar-Ju">👩</span>Ju
+        <span class="avatar-wrapper" onclick="event.stopPropagation();openAvatarPicker('Ju')">
+          <span class="player-dot" id="avatar-Ju">👩</span>
+          <span class="avatar-edit-hint">✏</span>
+        </span>Ju
         <span class="player-badge" id="badge-Ju">●</span>
         <span class="player-stats" id="stats-Ju"></span>
         <button class="history-player-btn" onclick="event.stopPropagation();openHistory('Ju')">📚</button>
-        <button class="player-edit-btn" onclick="event.stopPropagation();openAvatarPicker('Ju')">✏️</button>
       </button>
       <button class="player-btn" onclick="selectPlayer('Sari')">
-        <span class="player-dot" id="avatar-Sari">👧</span>Sari
+        <span class="avatar-wrapper" onclick="event.stopPropagation();openAvatarPicker('Sari')">
+          <span class="player-dot" id="avatar-Sari">👧</span>
+          <span class="avatar-edit-hint">✏</span>
+        </span>Sari
         <span class="player-badge" id="badge-Sari">●</span>
         <span class="player-stats" id="stats-Sari"></span>
         <button class="history-player-btn" onclick="event.stopPropagation();openHistory('Sari')">📚</button>
-        <button class="player-edit-btn" onclick="event.stopPropagation();openAvatarPicker('Sari')">✏️</button>
       </button>
       <button class="player-btn" onclick="selectPlayer('Ro')">
-        <span class="player-dot" id="avatar-Ro">👦</span>Ro
+        <span class="avatar-wrapper" onclick="event.stopPropagation();openAvatarPicker('Ro')">
+          <span class="player-dot" id="avatar-Ro">👦</span>
+          <span class="avatar-edit-hint">✏</span>
+        </span>Ro
         <span class="player-badge" id="badge-Ro">●</span>
         <span class="player-stats" id="stats-Ro"></span>
         <button class="history-player-btn" onclick="event.stopPropagation();openHistory('Ro')">📚</button>
-        <button class="player-edit-btn" onclick="event.stopPropagation();openAvatarPicker('Ro')">✏️</button>
       </button>
       <button class="player-btn" onclick="selectPlayer('Kri')">
-        <span class="player-dot" id="avatar-Kri">👩</span>Kri
+        <span class="avatar-wrapper" onclick="event.stopPropagation();openAvatarPicker('Kri')">
+          <span class="player-dot" id="avatar-Kri">👩</span>
+          <span class="avatar-edit-hint">✏</span>
+        </span>Kri
         <span class="player-badge" id="badge-Kri">●</span>
         <span class="player-stats" id="stats-Kri"></span>
         <button class="history-player-btn" onclick="event.stopPropagation();openHistory('Kri')">📚</button>
-        <button class="player-edit-btn" onclick="event.stopPropagation();openAvatarPicker('Kri')">✏️</button>
       </button>
       <button class="player-btn" onclick="selectPlayer('Ali')">
-        <span class="player-dot" id="avatar-Ali">👧</span>Ali
+        <span class="avatar-wrapper" onclick="event.stopPropagation();openAvatarPicker('Ali')">
+          <span class="player-dot" id="avatar-Ali">👧</span>
+          <span class="avatar-edit-hint">✏</span>
+        </span>Ali
         <span class="player-badge" id="badge-Ali">●</span>
         <span class="player-stats" id="stats-Ali"></span>
         <button class="history-player-btn" onclick="event.stopPropagation();openHistory('Ali')">📚</button>
-        <button class="player-edit-btn" onclick="event.stopPropagation();openAvatarPicker('Ali')">✏️</button>
       </button>
       <button class="player-btn" onclick="selectPlayer('Invitado')">
-        <span class="player-dot" id="avatar-Invitado">🧑</span>Invitado
+        <span class="avatar-wrapper" onclick="event.stopPropagation();openAvatarPicker('Invitado')">
+          <span class="player-dot" id="avatar-Invitado">🧑</span>
+          <span class="avatar-edit-hint">✏</span>
+        </span>Invitado
         <span class="player-badge" id="badge-Invitado">●</span>
         <span class="player-stats" id="stats-Invitado"></span>
-        <button class="player-edit-btn" onclick="event.stopPropagation();openAvatarPicker('Invitado')">✏️</button>
       </button>
     </div>
   </div>
