@@ -969,11 +969,16 @@ Si no hay errores, vocabulary, etc., devolvé arrays vacíos. Máximo 5 items po
       })
     });
     const data = await res.json();
-    const raw = data?.content?.[0]?.text || '';
-    const parsed = JSON.parse(raw);
+    let raw = data?.content?.[0]?.text || '';
+    // Strip markdown code blocks if Claude wrapped the JSON
+    raw = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+    // Extract first JSON object in case there's extra text
+    const match = raw.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error('No JSON found');
+    const parsed = JSON.parse(match[0]);
     renderAnalysis(parsed);
   } catch(e) {
-    document.getElementById('h-loading').innerHTML = '<div class="h-empty">No se pudo analizar la sesión. Intentá más tarde.</div>';
+    document.getElementById('h-loading').innerHTML = '<div class="h-empty">No se pudo analizar la sesión. Intentá más tarde.<br><small>' + e.message + '</small></div>';
   }
 }
 
