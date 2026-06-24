@@ -1225,8 +1225,12 @@ document.getElementById('continue-btn').addEventListener('click', () => {
 });
 
 document.getElementById('start-btn').addEventListener('click', () => {
-  clearSession();
+  // Load existing history so the agent remembers past sessions
+  const saved = loadSession(currentPlayer);
   conversationHistory.length = 0;
+  if (saved && saved.history && saved.history.length > 0) {
+    conversationHistory.push(...saved.history);
+  }
   unlockTTS();
   startVoiceSession(false);
 });
@@ -1317,6 +1321,8 @@ ERROR CORRECTION: Correct ALL grammar and pronunciation mistakes immediately —
 - Always correct BEFORE continuing the conversation topic.
 
 ENCOURAGEMENT: Be warm. Brief praise when the user does well.
+
+MEMORY: You have access to the full conversation history from past sessions with this student. Use it actively: remember their name, topics you've discussed, mistakes they've made before, vocabulary they've learned, and their progress. Reference past conversations naturally (e.g. "Last time we talked about...", "You were working on this word before..."). Build on what they already know.
 
 ${translationInstr}
 
