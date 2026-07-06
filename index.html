@@ -188,6 +188,46 @@
   }
   .player-edit-btn:hover { opacity: 1; }
 
+  /* ══ CONFIG SCREEN ══ */
+  .config-open-btn {
+    margin-top: 1rem; width: 100%; padding: 10px;
+    background: none; border: 1px solid var(--border); border-radius: 10px;
+    color: var(--muted); font-size: 0.85rem; cursor: pointer; transition: all 0.15s;
+  }
+  .config-open-btn:hover { border-color: var(--accent-fr); color: var(--accent-fr); }
+  #config-screen {
+    display: none; position: fixed; inset: 0; z-index: 90;
+    background: rgba(0,0,0,0.6); align-items: center; justify-content: center;
+  }
+  .config-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 20px; padding: 1.25rem; width: 90%; max-width: 360px;
+    display: flex; flex-direction: column; gap: 1rem;
+  }
+  .config-subtitle { font-size: 0.8rem; color: var(--muted); text-align: center; }
+  .config-player-row {
+    display: flex; gap: 10px; justify-content: center;
+  }
+  .cfg-player-btn {
+    display: flex; flex-direction: column; align-items: center; gap: 5px;
+    background: var(--surface2); border: 2px solid var(--border);
+    border-radius: 14px; padding: 10px 14px; cursor: pointer;
+    font-size: 0.85rem; font-weight: 600; color: var(--muted);
+    transition: all 0.2s; min-width: 70px;
+  }
+  .cfg-player-btn .cfg-avatar { font-size: 2rem; line-height: 1; }
+  .cfg-player-btn.active { border-color: var(--accent-fr); color: var(--accent-fr); background: rgba(192,132,252,0.1); }
+  .config-actions {
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .cfg-action-btn {
+    width: 100%; padding: 12px; border-radius: 12px; font-size: 0.9rem;
+    font-weight: 600; cursor: pointer; border: none; transition: all 0.15s;
+  }
+  .cfg-action-btn.primary { background: var(--accent-fr); color: #0e0f14; }
+  .cfg-action-btn.secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .cfg-action-btn:disabled { opacity: 0.35; cursor: default; }
+
   /* ══ AVATAR PICKER ══ */
   #avatar-modal {
     display: none; position: fixed; inset: 0;
@@ -632,33 +672,35 @@
     <h2>¿Quién juega?</h2>
     <div class="player-grid">
       <button class="player-btn" onclick="selectPlayer('Ju')">
-        <span class="avatar-wrapper" onclick="event.stopPropagation();openAvatarPicker('Ju')">
-          <span class="player-dot" id="avatar-Ju">👩</span>
-          <span class="avatar-edit-hint">✏</span>
-        </span>Ju
+        <span class="player-dot" id="avatar-Ju">👩</span>Ju
         <span class="player-badge" id="badge-Ju">●</span>
         <span class="player-stats" id="stats-Ju"></span>
-        <span class="history-player-btn" onclick="event.stopPropagation();openHistory('Ju')">📚 Mi progreso</span>
       </button>
       <button class="player-btn" onclick="selectPlayer('Sari')">
-        <span class="avatar-wrapper" onclick="event.stopPropagation();openAvatarPicker('Sari')">
-          <span class="player-dot" id="avatar-Sari">👧</span>
-          <span class="avatar-edit-hint">✏</span>
-        </span>Sari
+        <span class="player-dot" id="avatar-Sari">👧</span>Sari
         <span class="player-badge" id="badge-Sari">●</span>
         <span class="player-stats" id="stats-Sari"></span>
-        <span class="history-player-btn" onclick="event.stopPropagation();openHistory('Sari')">📚 Mi progreso</span>
       </button>
       <button class="player-btn" onclick="selectPlayer('Ro')">
-        <span class="avatar-wrapper" onclick="event.stopPropagation();openAvatarPicker('Ro')">
-          <span class="player-dot" id="avatar-Ro">👦</span>
-          <span class="avatar-edit-hint">✏</span>
-        </span>Ro
+        <span class="player-dot" id="avatar-Ro">👦</span>Ro
         <span class="player-badge" id="badge-Ro">●</span>
         <span class="player-stats" id="stats-Ro"></span>
-        <span class="history-player-btn" onclick="event.stopPropagation();openHistory('Ro')">📚 Mi progreso</span>
       </button>
     </div>
+    <button class="config-open-btn" onclick="openConfigScreen()">⚙️ Configuración</button>
+  </div>
+</div>
+
+<!-- ══ CONFIG SCREEN ══ -->
+<div id="config-screen">
+  <div class="config-card">
+    <div class="history-header">
+      <button class="history-back" onclick="closeConfigScreen()">← Volver</button>
+      <span class="history-title">Configuración</span>
+    </div>
+    <p class="config-subtitle">Seleccioná un jugador</p>
+    <div class="config-player-row" id="config-player-row"></div>
+    <div class="config-actions" id="config-actions"></div>
   </div>
 </div>
 
@@ -1002,6 +1044,57 @@ function renderAnalysis(d) {
   if (!el.innerHTML) {
     el.innerHTML = '<div class="h-empty">No se encontraron datos suficientes para analizar.</div>';
   }
+}
+
+// ══ CONFIG SCREEN ══
+let configScreenPlayer = null;
+
+function openConfigScreen() {
+  configScreenPlayer = null;
+  renderConfigPlayers();
+  renderConfigActions();
+  document.getElementById('config-screen').style.display = 'flex';
+}
+
+function closeConfigScreen() {
+  document.getElementById('config-screen').style.display = 'none';
+  configScreenPlayer = null;
+}
+
+function renderConfigPlayers() {
+  const row = document.getElementById('config-player-row');
+  row.innerHTML = ['Ju','Sari','Ro'].map(p => `
+    <button class="cfg-player-btn${configScreenPlayer === p ? ' active' : ''}" onclick="selectConfigPlayer('${p}')">
+      <span class="cfg-avatar">${getAvatar(p)}</span>${p}
+    </button>
+  `).join('');
+}
+
+function selectConfigPlayer(p) {
+  configScreenPlayer = p;
+  renderConfigPlayers();
+  renderConfigActions();
+}
+
+function renderConfigActions() {
+  const el = document.getElementById('config-actions');
+  const disabled = !configScreenPlayer ? 'disabled' : '';
+  el.innerHTML = `
+    <button class="cfg-action-btn primary" ${disabled} onclick="cfgOpenHistory()">📚 Ver historial y progreso</button>
+    <button class="cfg-action-btn secondary" ${disabled} onclick="cfgOpenAvatar()">🎨 Cambiar avatar</button>
+  `;
+}
+
+function cfgOpenHistory() {
+  if (!configScreenPlayer) return;
+  closeConfigScreen();
+  openHistory(configScreenPlayer);
+}
+
+function cfgOpenAvatar() {
+  if (!configScreenPlayer) return;
+  closeConfigScreen();
+  openAvatarPicker(configScreenPlayer);
 }
 
 // ══ AVATAR ══
