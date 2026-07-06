@@ -1043,14 +1043,16 @@ function renderConfigActions() {
 
 function cfgOpenHistory() {
   if (!configScreenPlayer) return;
+  const p = configScreenPlayer;
   closeConfigScreen();
-  openHistory(configScreenPlayer);
+  openHistory(p);
 }
 
 function cfgOpenAvatar() {
   if (!configScreenPlayer) return;
+  const p = configScreenPlayer;
   closeConfigScreen();
-  openAvatarPicker(configScreenPlayer);
+  openAvatarPicker(p);
 }
 
 // ══ AVATAR ══
