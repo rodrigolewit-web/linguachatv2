@@ -1078,27 +1078,44 @@ function getAvatar(player) {
 function openAvatarPicker(player) {
   avatarPickerPlayer = player;
   const current = getAvatar(player);
-  const modal = document.getElementById('avatar-modal');
+  const card = document.getElementById('avatar-card-inner');
 
-  // Build tabs + grids
   const tabsHtml = AVATAR_CATEGORIES.map((cat, i) =>
-    `<button class="acat-tab${i === 0 ? ' active' : ''}" onclick="switchAvatarCat(${i})">${cat.label}</button>`
+    `<button class="acat-tab${i === 0 ? ' active' : ''}" data-cat="${i}">${cat.label}</button>`
   ).join('');
 
   const gridsHtml = AVATAR_CATEGORIES.map((cat, i) => {
-    const btns = cat.emojis.map(e =>
-      `<button class="avatar-opt${e === current ? ' selected' : ''}" onclick="selectAvatar('${e}')">${e}</button>`
-    ).join('');
+    const btns = cat.emojis.map(e => {
+      const sel = e === current ? ' selected' : '';
+      const btn = document.createElement('button');
+      btn.className = 'avatar-opt' + sel;
+      btn.textContent = e;
+      // store emoji safely in dataset, not in onclick
+      btn._emoji = e;
+      return btn.outerHTML.replace('>', ` data-emoji-idx="${AVATAR_EMOJIS.indexOf(e)}">`);
+    }).join('');
     return `<div class="avatar-cat-grid${i === 0 ? ' active' : ''}" id="acat-${i}">${btns}</div>`;
   }).join('');
 
-  document.getElementById('avatar-card-inner').innerHTML = `
+  card.innerHTML = `
     <h3>Elegí tu avatar</h3>
     <div class="acat-tabs">${tabsHtml}</div>
-    <div class="avatar-grids">${gridsHtml}</div>
-    <button class="avatar-close" onclick="closeAvatarPicker()">Cerrar</button>
+    <div class="avatar-grids" id="avatar-grids-container">${gridsHtml}</div>
+    <button class="avatar-close" id="avatar-close-btn">Cerrar</button>
   `;
-  modal.classList.add('open');
+
+  // Event delegation — safe for all emoji types
+  card.querySelector('.acat-tabs').addEventListener('click', e => {
+    const btn = e.target.closest('[data-cat]');
+    if (btn) switchAvatarCat(Number(btn.dataset.cat));
+  });
+  card.querySelector('#avatar-grids-container').addEventListener('click', e => {
+    const btn = e.target.closest('[data-emoji-idx]');
+    if (btn) selectAvatar(AVATAR_EMOJIS[Number(btn.dataset.emojiIdx)]);
+  });
+  card.querySelector('#avatar-close-btn').addEventListener('click', closeAvatarPicker);
+
+  document.getElementById('avatar-modal').classList.add('open');
 }
 
 function switchAvatarCat(idx) {
