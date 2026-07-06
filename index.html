@@ -658,32 +658,6 @@
         <span class="player-stats" id="stats-Ro"></span>
         <span class="history-player-btn" onclick="event.stopPropagation();openHistory('Ro')">📚 Mi progreso</span>
       </button>
-      <button class="player-btn" onclick="selectPlayer('Kri')">
-        <span class="avatar-wrapper" onclick="event.stopPropagation();openAvatarPicker('Kri')">
-          <span class="player-dot" id="avatar-Kri">👩</span>
-          <span class="avatar-edit-hint">✏</span>
-        </span>Kri
-        <span class="player-badge" id="badge-Kri">●</span>
-        <span class="player-stats" id="stats-Kri"></span>
-        <span class="history-player-btn" onclick="event.stopPropagation();openHistory('Kri')">📚 Mi progreso</span>
-      </button>
-      <button class="player-btn" onclick="selectPlayer('Ali')">
-        <span class="avatar-wrapper" onclick="event.stopPropagation();openAvatarPicker('Ali')">
-          <span class="player-dot" id="avatar-Ali">👧</span>
-          <span class="avatar-edit-hint">✏</span>
-        </span>Ali
-        <span class="player-badge" id="badge-Ali">●</span>
-        <span class="player-stats" id="stats-Ali"></span>
-        <span class="history-player-btn" onclick="event.stopPropagation();openHistory('Ali')">📚 Mi progreso</span>
-      </button>
-      <button class="player-btn" onclick="selectPlayer('Invitado')">
-        <span class="avatar-wrapper" onclick="event.stopPropagation();openAvatarPicker('Invitado')">
-          <span class="player-dot" id="avatar-Invitado">🧑</span>
-          <span class="avatar-edit-hint">✏</span>
-        </span>Invitado
-        <span class="player-badge" id="badge-Invitado">●</span>
-        <span class="player-stats" id="stats-Invitado"></span>
-      </button>
     </div>
   </div>
 </div>
@@ -877,7 +851,7 @@ function clearSession() {
 let historyPlayer = null;
 let currentHTab = 'analysis';
 
-const HISTORY_PLAYERS = ['Ju','Sari','Ro','Kri','Ali'];
+const HISTORY_PLAYERS = ['Ju','Sari','Ro'];
 
 function renderPlayerSwitcher(activePlayer) {
   const el = document.getElementById('history-player-switcher');
@@ -1045,7 +1019,7 @@ const AVATAR_CATEGORIES = [
   { label: '👾 Fantasy & Raros', emojis: ['👾','🤖','👽','👻','💀','☠️','🎃','🤡','💩','👹','👺','🎭','👁️','🧠','🔮','🎱','🪄','🧿','🃏','🀄','🫠','🫣','🫡','🥴','🤯','🤬','😈','👿'] },
   { label: '🌈 Cosas divertidas', emojis: ['🌈','⭐','🔥','💎','🌊','🍕','🍦','🍩','🎮','🎸','🎺','🥁','🎤','🎧','🎨','🚀','🛸','🪐','💫','🌙','☀️','⚡','🌺','🌸','🍀','🎄','🌵','🌴','🏆','💣','🎯','🪩','🎪','🎠'] },
 ];
-const DEFAULT_AVATARS = { Ju:'👩', Sari:'👧', Ro:'👦', Kri:'👩', Ali:'👧', Invitado:'🧑' };
+const DEFAULT_AVATARS = { Ju:'👩', Sari:'👧', Ro:'👦' };
 let avatarPickerPlayer = null;
 
 function getAvatar(player) {
@@ -1149,7 +1123,7 @@ function renderStats(player) {
 function showPlayerScreen() {
   accumulateTime();
   loadAllAvatars();
-  ['Ju','Sari','Ro','Kri','Ali','Invitado'].forEach(p => {
+  ['Ju','Sari','Ro'].forEach(p => {
     const saved = p !== 'Invitado' ? loadSession(p) : null;
     const badge = document.getElementById(`badge-${p}`);
     if (badge) badge.parentElement.classList.toggle('has-history', !!saved);
