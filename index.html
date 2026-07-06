@@ -599,44 +599,6 @@
   .listen-btn:active { transform: scale(0.97); }
 
   /* Text fallback input */
-  .text-fallback {
-    display: none;
-    width: 100%;
-    max-width: 480px;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-  .text-fallback textarea {
-    width: 100%;
-    background: var(--surface2);
-    border: 1.5px solid var(--border);
-    border-radius: 10px;
-    padding: 0.7rem 0.9rem;
-    color: var(--text);
-    font-family: 'Inter', sans-serif;
-    font-size: 0.88rem;
-    resize: none;
-    height: 70px;
-    line-height: 1.5;
-  }
-  .text-fallback textarea:focus { outline: none; border-color: var(--accent); }
-  .text-fallback textarea::placeholder { color: var(--muted); }
-  .text-fallback button {
-    padding: 0.65rem;
-    border-radius: 10px;
-    border: none;
-    background: var(--accent);
-    color: #0e0f14;
-    font-family: 'Inter', sans-serif;
-    font-size: 0.9rem;
-    font-weight: 600;
-    cursor: pointer;
-  }
-  .fallback-note {
-    font-size: 0.7rem;
-    color: var(--muted);
-    text-align: center;
-  }
 
   /* Error banner */
   .error-banner {
@@ -823,12 +785,6 @@
     <!-- Listen button (shown when TTS needs user gesture) -->
     <button class="listen-btn" id="listen-btn" onclick="onListenTap()">▶ Escuchar a Alex</button>
 
-    <!-- Text fallback (shown when mic not available) -->
-    <div class="text-fallback" id="text-fallback">
-      <textarea id="text-input" placeholder="Escribe tu respuesta aquí…"></textarea>
-      <button onclick="sendTextFallback()">Enviar respuesta</button>
-      <div class="fallback-note">💡 Para usar voz: abre este archivo desde un servidor HTTPS</div>
-    </div>
 
     <!-- Mic -->
     <div class="mic-section">
@@ -1472,7 +1428,7 @@ function onTTSDone() {
     if (hint) hint.textContent = 'Presiona 🎙 para hablar';
   } else {
     setStatus('Tu turno — escribe tu respuesta', '');
-    showTextFallback(true);
+    enableMic(true);
   }
 }
 
@@ -1560,7 +1516,7 @@ const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 function setupSpeechRecognition() {
   if (!SpeechRecognitionAPI) {
     setStatus('Sin soporte de voz — escribe tu respuesta', '');
-    showTextFallback(true);
+    enableMic(true);
     enableMic(false);
   }
   // On iOS we create a fresh instance on every tap — nothing to set up here
@@ -1623,7 +1579,7 @@ function startListening() {
     } else if (event.error === 'not-allowed') {
       setOrbState('idle');
       setStatus('Sin micrófono — escribe tu respuesta', '');
-      showTextFallback(true);
+      enableMic(true);
       enableMic(false);
     } else {
       setOrbState('idle');
@@ -1679,34 +1635,7 @@ function onListenTap() {
 }
 
 // ══ TEXT FALLBACK ══
-function showTextFallback(show) {
-  const el = document.getElementById('text-fallback');
-  const micSection = document.querySelector('.mic-section');
-  if (el) el.style.display = show ? 'flex' : 'none';
-  if (micSection) micSection.style.display = show ? 'none' : 'flex';
-}
-
-function sendTextFallback() {
-  const ta = document.getElementById('text-input');
-  if (!ta) return;
-  const text = ta.value.trim();
-  if (!text) return;
-  ta.value = '';
-  showTextFallback(false);
-  const userEl = document.getElementById('transcript-user');
-  if (userEl) userEl.textContent = text;
-  callAgent(text);
-}
-
-// Allow Enter key in text fallback
-document.addEventListener('DOMContentLoaded', () => {
-  const ta = document.getElementById('text-input');
-  if (ta) {
-    ta.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendTextFallback(); }
-    });
-  }
-});
+function showTextFallback() {} // removed
 
 // ══ UI HELPERS ══
 function setOrbState(state) {
