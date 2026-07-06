@@ -1084,36 +1084,49 @@ function openAvatarPicker(player) {
     `<button class="acat-tab${i === 0 ? ' active' : ''}" data-cat="${i}">${cat.label}</button>`
   ).join('');
 
-  const gridsHtml = AVATAR_CATEGORIES.map((cat, i) => {
-    const btns = cat.emojis.map(e => {
-      const sel = e === current ? ' selected' : '';
+  // Build grids using DOM (not innerHTML) so emojis are stored safely
+  const cardEl = document.createElement('div');
+
+  const h3 = document.createElement('h3');
+  h3.textContent = 'Elegí tu avatar';
+  cardEl.appendChild(h3);
+
+  const tabsDiv = document.createElement('div');
+  tabsDiv.className = 'acat-tabs';
+  AVATAR_CATEGORIES.forEach((cat, i) => {
+    const tab = document.createElement('button');
+    tab.className = 'acat-tab' + (i === 0 ? ' active' : '');
+    tab.textContent = cat.label;
+    tab.addEventListener('click', () => switchAvatarCat(i));
+    tabsDiv.appendChild(tab);
+  });
+  cardEl.appendChild(tabsDiv);
+
+  const gridsDiv = document.createElement('div');
+  gridsDiv.className = 'avatar-grids';
+  AVATAR_CATEGORIES.forEach((cat, i) => {
+    const grid = document.createElement('div');
+    grid.className = 'avatar-cat-grid' + (i === 0 ? ' active' : '');
+    grid.id = `acat-${i}`;
+    cat.emojis.forEach(e => {
       const btn = document.createElement('button');
-      btn.className = 'avatar-opt' + sel;
+      btn.className = 'avatar-opt' + (e === current ? ' selected' : '');
       btn.textContent = e;
-      // store emoji safely in dataset, not in onclick
-      btn._emoji = e;
-      return btn.outerHTML.replace('>', ` data-emoji-idx="${AVATAR_EMOJIS.indexOf(e)}">`);
-    }).join('');
-    return `<div class="avatar-cat-grid${i === 0 ? ' active' : ''}" id="acat-${i}">${btns}</div>`;
-  }).join('');
-
-  card.innerHTML = `
-    <h3>Elegí tu avatar</h3>
-    <div class="acat-tabs">${tabsHtml}</div>
-    <div class="avatar-grids" id="avatar-grids-container">${gridsHtml}</div>
-    <button class="avatar-close" id="avatar-close-btn">Cerrar</button>
-  `;
-
-  // Event delegation — safe for all emoji types
-  card.querySelector('.acat-tabs').addEventListener('click', e => {
-    const btn = e.target.closest('[data-cat]');
-    if (btn) switchAvatarCat(Number(btn.dataset.cat));
+      btn.addEventListener('click', () => selectAvatar(e));
+      grid.appendChild(btn);
+    });
+    gridsDiv.appendChild(grid);
   });
-  card.querySelector('#avatar-grids-container').addEventListener('click', e => {
-    const btn = e.target.closest('[data-emoji-idx]');
-    if (btn) selectAvatar(AVATAR_EMOJIS[Number(btn.dataset.emojiIdx)]);
-  });
-  card.querySelector('#avatar-close-btn').addEventListener('click', closeAvatarPicker);
+  cardEl.appendChild(gridsDiv);
+
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'avatar-close';
+  closeBtn.textContent = 'Cerrar';
+  closeBtn.addEventListener('click', closeAvatarPicker);
+  cardEl.appendChild(closeBtn);
+
+  card.innerHTML = '';
+  card.appendChild(cardEl);
 
   document.getElementById('avatar-modal').classList.add('open');
 }
