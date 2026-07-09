@@ -445,10 +445,11 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    gap: 2rem;
-    padding: 1.5rem;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.5rem 1.5rem 1rem;
     width: 100%;
+    overflow: hidden;
   }
 
   /* Orb — animated speaking indicator */
@@ -525,9 +526,12 @@
     width: 100%;
     max-width: 480px;
     min-height: 80px;
+    max-height: 38vh;
+    overflow-y: auto;
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
+    flex-shrink: 1;
   }
   .transcript-agent {
     font-size: 0.85rem;
@@ -559,6 +563,7 @@
     flex-direction: column;
     align-items: center;
     gap: 0.7rem;
+    flex-shrink: 0;
   }
   .mic-btn {
     width: 72px; height: 72px;
