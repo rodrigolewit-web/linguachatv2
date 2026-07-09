@@ -724,28 +724,6 @@
         <button class="opt-btn" data-group="level" data-val="advanced"><span class="emoji">🔥</span>Avanzado<span class="sub">Casi fluido</span></button>
       </div>
     </div>
-    <div class="divider"></div>
-
-    <!-- VELOCIDAD -->
-    <div class="setup-section">
-      <label>Ritmo de la conversación</label>
-      <div class="option-grid cols-3">
-        <button class="opt-btn" data-group="pace" data-val="slow"><span class="emoji">🐢</span>Pausado<span class="sub">Frases cortas</span></button>
-        <button class="opt-btn" data-group="pace" data-val="normal"><span class="emoji">🚶</span>Normal<span class="sub">Fluido</span></button>
-        <button class="opt-btn" data-group="pace" data-val="fast"><span class="emoji">⚡</span>Rápido<span class="sub">Desafiante</span></button>
-      </div>
-    </div>
-    <div class="divider"></div>
-
-    <!-- REGISTRO -->
-    <div class="setup-section">
-      <label>Registro de la conversación</label>
-      <div class="option-grid cols-3">
-        <button class="opt-btn" data-group="register" data-val="formal"><span class="emoji">👔</span>Formal<span class="sub">Negocios</span></button>
-        <button class="opt-btn" data-group="register" data-val="neutral"><span class="emoji">💬</span>Normal<span class="sub">Everyday</span></button>
-        <button class="opt-btn" data-group="register" data-val="informal"><span class="emoji">😎</span>Informal<span class="sub">Casual</span></button>
-      </div>
-    </div>
 
     <button class="start-btn" id="continue-btn" style="display:none;background:var(--surface2);border:1.5px solid var(--accent);color:var(--accent);">↩ Continuar conversación anterior</button>
     <button class="start-btn" id="start-btn" disabled>🎙 Empezar conversación nueva →</button>
@@ -819,7 +797,7 @@ function checkLogin() {
 }
 
 // ══ CONFIG ══
-const config = { lang: null, level: null, pace: null, register: null };
+const config = { lang: null, level: null };
 
 // ══ PERSISTENCE ══
 let currentPlayer = null;
@@ -1250,7 +1228,7 @@ document.querySelectorAll('.opt-btn').forEach(btn => {
 });
 
 function checkReady() {
-  const ready = config.lang && config.level && config.pace && config.register;
+  const ready = config.lang && config.level;
   document.getElementById('start-btn').disabled = !ready;
   if (config.lang) {
     const colors = { en: '#4f9cf9', fr: '#c084fc', pt: '#34d399' };
@@ -1272,7 +1250,7 @@ document.getElementById('continue-btn').addEventListener('click', () => {
   Object.assign(config, saved.config);
   conversationHistory.push(...saved.history);
   // Restore selected buttons visually
-  ['lang','level','pace','register'].forEach(group => {
+  ['lang','level'].forEach(group => {
     const val = config[group];
     if (val) {
       document.querySelectorAll(`[data-group="${group}"]`).forEach(b => b.classList.remove('selected'));
@@ -1303,8 +1281,6 @@ function startVoiceSession(isContinuing = false) {
   document.getElementById('hdr-title').textContent = meta.name + ' — ' + meta.agentName;
   const labels = [
     { beginner: '🌱 Principiante', intermediate: '📚 Intermedio', advanced: '🔥 Avanzado' }[config.level],
-    { slow: '🐢 Pausado', normal: '🚶 Normal', fast: '⚡ Rápido' }[config.pace],
-    { formal: '👔 Formal', neutral: '💬 Normal', informal: '😎 Informal' }[config.register],
   ];
   document.getElementById('hdr-sub').textContent = labels.join(' · ');
   document.getElementById('orb-emoji').textContent = meta.flag;
@@ -1347,17 +1323,8 @@ function buildSystemPrompt() {
     advanced:     'Use rich vocabulary, idiomatic expressions, complex sentences. Discuss nuanced topics freely. Challenge the user naturally.'
   }[config.level];
 
-  const paceInstr = {
-    slow:   'Keep responses extremely short: 1-2 sentences only. ONE question at a time. Simple words.',
-    normal: 'Keep responses to 2-3 sentences. One clear follow-up question. Natural conversational flow.',
-    fast:   'Give 3-5 sentence responses. Multiple ideas. Move quickly between topics. Simulate native speed.'
-  }[config.pace];
-
-  const registerInstr = {
-    formal:   'Use formal register. English: no contractions, professional vocabulary. French: always "vous". Portuguese: "o senhor/a senhora".',
-    neutral:  'Use neutral everyday register. Contractions fine. Friendly but not slangy.',
-    informal: 'Use casual colloquial register. Slang and contractions encouraged. French: "tu". Portuguese: "você" casually.'
-  }[config.register];
+  const paceInstr = 'Keep responses to 2-3 sentences. One clear follow-up question. Natural conversational flow.';
+  const registerInstr = 'Use neutral everyday register. Contractions fine. Friendly but not slangy.';
 
   const translationInstr = config.level !== 'advanced'
     ? `CRITICAL: After your response in ${meta.name}, add exactly "---" on a new line, then a SHORT Spanish summary labeled "ES:". Example:\nHello! How are you today?\n---\nES: Te saluda y pregunta cómo estás.`
@@ -1485,7 +1452,7 @@ async function doSpeak(text) {
     const response = await fetch('/api/tts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: cleanText, lang: meta.ttsLang, pace: config.pace })
+      body: JSON.stringify({ text: cleanText, lang: meta.ttsLang, pace: 'normal' })
     });
 
     if (!response.ok) throw new Error('TTS error ' + response.status);
