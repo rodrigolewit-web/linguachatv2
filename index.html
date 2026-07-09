@@ -704,17 +704,7 @@
   </div>
 
   <div class="setup-card">
-    <!-- IDIOMA -->
-    <div class="setup-section">
-      <label>Idioma a practicar</label>
-      <div class="option-grid cols-3">
-        <button class="opt-btn lang-en" data-group="lang" data-val="en"><span class="emoji">🇬🇧</span>English</button>
-        <button class="opt-btn lang-fr" data-group="lang" data-val="fr"><span class="emoji">🇫🇷</span>Français</button>
-        <button class="opt-btn lang-pt" data-group="lang" data-val="pt"><span class="emoji">🇧🇷</span>Português</button>
-      </div>
-    </div>
-
-    <button class="start-btn" id="continue-btn" style="display:none;background:var(--surface2);border:1.5px solid var(--accent);color:var(--accent);">↩ Continuar conversación anterior</button>
+<button class="start-btn" id="continue-btn" style="display:none;background:var(--surface2);border:1.5px solid var(--accent);color:var(--accent);">↩ Continuar conversación anterior</button>
     <button class="start-btn" id="start-btn" disabled>🎙 Empezar conversación nueva →</button>
   </div>
 </div>
@@ -1215,6 +1205,7 @@ function showPlayerScreen() {
 
 function selectPlayer(player) {
   currentPlayer = player;
+  config.lang = 'en';
   config.level = localStorage.getItem('ttm_level_' + player) || 'intermediate';
   updateStreak(player);
   document.getElementById('player-screen').style.display = 'none';
@@ -1246,8 +1237,7 @@ document.querySelectorAll('.opt-btn').forEach(btn => {
 });
 
 function checkReady() {
-  const ready = !!(config.lang && config.level);
-  document.getElementById('start-btn').disabled = !ready;
+  document.getElementById('start-btn').disabled = false;
   if (config.lang) {
     const colors = { en: '#4f9cf9', fr: '#c084fc', pt: '#34d399' };
     document.documentElement.style.setProperty('--accent', colors[config.lang]);
@@ -1267,15 +1257,6 @@ document.getElementById('continue-btn').addEventListener('click', () => {
   if (!saved) return;
   Object.assign(config, saved.config);
   conversationHistory.push(...saved.history);
-  // Restore selected buttons visually
-  ['lang'].forEach(group => {
-    const val = config[group];
-    if (val) {
-      document.querySelectorAll(`[data-group="${group}"]`).forEach(b => b.classList.remove('selected'));
-      const btn = document.querySelector(`[data-group="${group}"][data-val="${val}"]`);
-      if (btn) btn.classList.add('selected');
-    }
-  });
   unlockTTS();
   startVoiceSession(true);
 });
@@ -1293,19 +1274,19 @@ document.getElementById('start-btn').addEventListener('click', () => {
 document.getElementById('reset-btn').addEventListener('click', resetSession);
 
 // ══ START ══
-function startVoiceSession(isContinuing = false) {
-  const meta = LANG_META[config.lang];
+function updateVoiceHeader() {
+  const meta = LANG_META[config.lang] || LANG_META['en'];
   document.getElementById('hdr-flag').textContent = meta.flag;
   document.getElementById('hdr-title').textContent = meta.name + ' — ' + meta.agentName;
-  const labels = [
-    { beginner: '🌱 Principiante', intermediate: '📚 Intermedio', advanced: '🔥 Avanzado' }[config.level],
-  ];
-  document.getElementById('hdr-sub').textContent = labels.join(' · ');
+  const levelLabel = { beginner: '🌱 Principiante', intermediate: '📚 Intermedio', advanced: '🔥 Avanzado' }[config.level] || '';
+  document.getElementById('hdr-sub').textContent = levelLabel;
   document.getElementById('orb-emoji').textContent = meta.flag;
-
-  // Update listen button label with agent name
   const listenBtn = document.getElementById('listen-btn');
   if (listenBtn) listenBtn.textContent = '▶ Escuchar a ' + meta.agentName;
+}
+
+function startVoiceSession(isContinuing = false) {
+  updateVoiceHeader();
 
   document.getElementById('setup-screen').style.display = 'none';
   document.getElementById('voice-screen').style.display = 'flex';
@@ -1348,11 +1329,16 @@ function buildSystemPrompt() {
     ? `CRITICAL: After your response in ${meta.name}, add exactly "---" on a new line, then a SHORT Spanish summary labeled "ES:". Example:\nHello! How are you today?\n---\nES: Te saluda y pregunta cómo estás.`
     : `Do NOT add Spanish translations. Full immersion only.`;
 
-  return `You are ${meta.agentName}, a warm and encouraging ${meta.name} conversation tutor. This is a VOICE conversation — the user will speak and you will respond. Your responses will be converted to speech.
+  const isLangChosen = conversationHistory.length > 0;
+  const langSection = isLangChosen
+    ? `LANGUAGE: Always respond in ${meta.name}. Do NOT switch languages.`
+    : `LANGUAGE SELECTION: Your very first message MUST be in English only. Greet the user warmly and ask which language they want to practice: English, French, or Portuguese. When the user replies with their choice, start your response with the exact tag [LANG:en], [LANG:fr], or [LANG:pt] on its own first line — this will be stripped before playback. Then switch entirely to the chosen language for the rest of that message and all future messages.`;
+
+  return `You are a warm and encouraging language conversation tutor. This is a VOICE conversation — the user will speak and you will respond. Your responses will be converted to speech.
 
 CRITICAL FOR VOICE: Write ONLY natural spoken sentences. NO bullet points, NO lists, NO markdown, NO asterisks, NO special characters. Write exactly as you would speak out loud.
 
-LANGUAGE: Always respond in ${meta.name}.
+${langSection}
 
 LEVEL: ${levelInstr}
 
@@ -1367,11 +1353,11 @@ ERROR CORRECTION: Correct ALL grammar and pronunciation mistakes immediately —
 
 ENCOURAGEMENT: Be warm. Brief praise when the user does well.
 
-MEMORY: You have access to the full conversation history from past sessions with this student. Use it actively: remember their name, topics you've discussed, mistakes they've made before, vocabulary they've learned, and their progress. Reference past conversations naturally (e.g. "Last time we talked about...", "You were working on this word before..."). Build on what they already know.
+MEMORY: You have access to the full conversation history from past sessions with this student. Use it actively: remember their name, topics you've discussed, mistakes they've made before, vocabulary they've learned, and their progress. Reference past conversations naturally. Build on what they already know.
 
 ${translationInstr}
 
-Begin with a warm greeting in ${meta.name} and start a simple, engaging conversation immediately.`;
+${isLangChosen ? `Begin with a warm greeting in ${meta.name} and start a simple, engaging conversation immediately.` : 'Begin by greeting the user in English and asking which language they want to practice.'}`;
 }
 
 // ══ API CALL ══
@@ -1397,7 +1383,17 @@ async function callAgent(userMessage) {
     const data = await response.json();
     if (data.error) throw new Error(data.error.message);
 
-    const fullText = data.content?.map(b => b.text || '').join('') || '';
+    let fullText = data.content?.map(b => b.text || '').join('') || '';
+
+    // Detect language switch tag [LANG:xx]
+    const langMatch = fullText.match(/^\[LANG:(en|fr|pt)\]\n?/);
+    if (langMatch) {
+      config.lang = langMatch[1];
+      fullText = fullText.slice(langMatch[0].length);
+      updateVoiceHeader();
+      setupSpeechRecognition();
+    }
+
     conversationHistory.push({ role: 'assistant', content: fullText });
 
     // Split main text and translation
