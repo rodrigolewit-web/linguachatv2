@@ -713,17 +713,6 @@
         <button class="opt-btn lang-pt" data-group="lang" data-val="pt"><span class="emoji">🇧🇷</span>Português</button>
       </div>
     </div>
-    <div class="divider"></div>
-
-    <!-- NIVEL -->
-    <div class="setup-section">
-      <label>Tu nivel en ese idioma</label>
-      <div class="option-grid cols-3">
-        <button class="opt-btn" data-group="level" data-val="beginner"><span class="emoji">🌱</span>Principiante<span class="sub">Poco o nada</span></button>
-        <button class="opt-btn" data-group="level" data-val="intermediate"><span class="emoji">📚</span>Intermedio<span class="sub">Me defiendo</span></button>
-        <button class="opt-btn" data-group="level" data-val="advanced"><span class="emoji">🔥</span>Avanzado<span class="sub">Casi fluido</span></button>
-      </div>
-    </div>
 
     <button class="start-btn" id="continue-btn" style="display:none;background:var(--surface2);border:1.5px solid var(--accent);color:var(--accent);">↩ Continuar conversación anterior</button>
     <button class="start-btn" id="start-btn" disabled>🎙 Empezar conversación nueva →</button>
@@ -1017,11 +1006,39 @@ function selectConfigPlayer(p) {
 
 function renderConfigActions() {
   const el = document.getElementById('config-actions');
-  const disabled = !configScreenPlayer ? 'disabled' : '';
+  if (!configScreenPlayer) {
+    el.innerHTML = `
+      <button class="cfg-action-btn primary" disabled>📚 Ver historial y progreso</button>
+      <button class="cfg-action-btn secondary" disabled>🎨 Cambiar avatar</button>
+    `;
+    return;
+  }
+  const savedLevel = localStorage.getItem('ttm_level_' + configScreenPlayer) || 'intermediate';
+  const levels = [
+    { val: 'beginner',     emoji: '🌱', label: 'Principiante' },
+    { val: 'intermediate', emoji: '📚', label: 'Intermedio' },
+    { val: 'advanced',     emoji: '🔥', label: 'Avanzado' },
+  ];
+  const levelBtns = levels.map(l => `
+    <button class="opt-btn${savedLevel === l.val ? ' selected' : ''}" onclick="cfgSaveLevel('${l.val}')">
+      <span class="emoji">${l.emoji}</span>${l.label}
+    </button>
+  `).join('');
   el.innerHTML = `
-    <button class="cfg-action-btn primary" ${disabled} onclick="cfgOpenHistory()">📚 Ver historial y progreso</button>
-    <button class="cfg-action-btn secondary" ${disabled} onclick="cfgOpenAvatar()">🎨 Cambiar avatar</button>
+    <div class="setup-section" style="width:100%;margin-bottom:0.5rem;">
+      <label>Nivel de ${configScreenPlayer}</label>
+      <div class="option-grid cols-3">${levelBtns}</div>
+    </div>
+    <button class="cfg-action-btn primary" onclick="cfgOpenHistory()">📚 Ver historial y progreso</button>
+    <button class="cfg-action-btn secondary" onclick="cfgOpenAvatar()">🎨 Cambiar avatar</button>
   `;
+}
+
+function cfgSaveLevel(val) {
+  if (!configScreenPlayer) return;
+  localStorage.setItem('ttm_level_' + configScreenPlayer, val);
+  if (currentPlayer === configScreenPlayer) config.level = val;
+  renderConfigActions();
 }
 
 function cfgOpenHistory() {
@@ -1198,6 +1215,7 @@ function showPlayerScreen() {
 
 function selectPlayer(player) {
   currentPlayer = player;
+  config.level = localStorage.getItem('ttm_level_' + player) || 'intermediate';
   updateStreak(player);
   document.getElementById('player-screen').style.display = 'none';
   document.getElementById('setup-screen').style.display = 'flex';
@@ -1228,7 +1246,7 @@ document.querySelectorAll('.opt-btn').forEach(btn => {
 });
 
 function checkReady() {
-  const ready = config.lang && config.level;
+  const ready = !!(config.lang && config.level);
   document.getElementById('start-btn').disabled = !ready;
   if (config.lang) {
     const colors = { en: '#4f9cf9', fr: '#c084fc', pt: '#34d399' };
@@ -1250,7 +1268,7 @@ document.getElementById('continue-btn').addEventListener('click', () => {
   Object.assign(config, saved.config);
   conversationHistory.push(...saved.history);
   // Restore selected buttons visually
-  ['lang','level'].forEach(group => {
+  ['lang'].forEach(group => {
     const val = config[group];
     if (val) {
       document.querySelectorAll(`[data-group="${group}"]`).forEach(b => b.classList.remove('selected'));
