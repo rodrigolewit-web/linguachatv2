@@ -710,6 +710,16 @@
 
 <!-- ══ VOICE SCREEN ══ -->
 <div id="voice-screen">
+  <!-- Language picker overlay -->
+  <div id="lang-picker" style="display:none;position:absolute;inset:0;z-index:50;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.5rem;padding:2rem;">
+    <p style="font-size:0.75rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);">¿Qué idioma practicamos hoy?</p>
+    <div style="display:flex;flex-direction:column;gap:0.9rem;width:100%;max-width:280px;">
+      <button onclick="pickLanguage('en')" style="font-size:1.15rem;padding:1rem;border-radius:14px;border:2px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;display:flex;align-items:center;gap:0.75rem;">🇬🇧 <span>English</span></button>
+      <button onclick="pickLanguage('fr')" style="font-size:1.15rem;padding:1rem;border-radius:14px;border:2px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;display:flex;align-items:center;gap:0.75rem;">🇫🇷 <span>Français</span></button>
+      <button onclick="pickLanguage('pt')" style="font-size:1.15rem;padding:1rem;border-radius:14px;border:2px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;display:flex;align-items:center;gap:0.75rem;">🇧🇷 <span>Português</span></button>
+    </div>
+  </div>
+
   <div class="voice-header">
     <div class="vh-left">
       <span class="vh-flag" id="hdr-flag"></span>
@@ -1280,13 +1290,25 @@ function updateVoiceHeader() {
 }
 
 function startVoiceSession(isContinuing = false) {
-  updateVoiceHeader();
-
   document.getElementById('setup-screen').style.display = 'none';
   document.getElementById('voice-screen').style.display = 'flex';
 
+  if (!langConfirmed) {
+    document.getElementById('lang-picker').style.display = 'flex';
+  } else {
+    updateVoiceHeader();
+    setupSpeechRecognition();
+    kickoffConversation(isContinuing);
+  }
+}
+
+function pickLanguage(lang) {
+  config.lang = lang;
+  langConfirmed = true;
+  document.getElementById('lang-picker').style.display = 'none';
+  updateVoiceHeader();
   setupSpeechRecognition();
-  kickoffConversation(isContinuing);
+  kickoffConversation(false);
 }
 
 function resetSession() {
@@ -1323,9 +1345,7 @@ function buildSystemPrompt() {
     ? `CRITICAL: After your response in ${meta.name}, add exactly "---" on a new line, then a SHORT Spanish summary labeled "ES:". Example:\nHello! How are you today?\n---\nES: Te saluda y pregunta cómo estás.`
     : `Do NOT add Spanish translations. Full immersion only.`;
 
-  const langSection = langConfirmed
-    ? `LANGUAGE: Always respond in ${meta.name}. Do NOT switch languages.`
-    : `LANGUAGE SELECTION: Your very first message MUST be in English only. Greet the user warmly and ask which language they want to practice: English, French, or Portuguese. When the user replies with their choice, start your response with the exact tag [LANG:en], [LANG:fr], or [LANG:pt] on its own first line — this will be stripped before playback. Then switch entirely to the chosen language for the rest of that message and all future messages.`;
+  const langSection = `LANGUAGE: Always respond in ${meta.name}. Do NOT switch languages.`;
 
   return `You are a warm and encouraging language conversation tutor. This is a VOICE conversation — the user will speak and you will respond. Your responses will be converted to speech.
 
@@ -1350,7 +1370,7 @@ MEMORY: You have access to the full conversation history from past sessions with
 
 ${translationInstr}
 
-${langConfirmed ? `Begin with a warm greeting in ${meta.name} and start a simple, engaging conversation immediately.` : 'Begin by greeting the user in English and asking which language they want to practice.'}`;
+`Begin with a warm greeting in ${meta.name} and start a simple, engaging conversation immediately.`;
 }
 
 // ══ API CALL ══
@@ -1376,16 +1396,7 @@ async function callAgent(userMessage) {
     const data = await response.json();
     if (data.error) throw new Error(data.error.message);
 
-    let fullText = data.content?.map(b => b.text || '').join('') || '';
-
-    // Detect language switch tag [LANG:xx] — may appear anywhere in first 100 chars
-    const langMatch = fullText.match(/\[LANG:(en|fr|pt)\]/i);
-    if (langMatch) {
-      config.lang = langMatch[1].toLowerCase();
-      langConfirmed = true;
-      fullText = fullText.replace(/\s*\[LANG:(en|fr|pt)\]\s*/i, '').trim();
-      updateVoiceHeader();
-    }
+    const fullText = data.content?.map(b => b.text || '').join('') || '';
 
     conversationHistory.push({ role: 'assistant', content: fullText });
 
