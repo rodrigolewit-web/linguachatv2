@@ -770,11 +770,6 @@
 // ══ LOGIN ══
 document.getElementById('setup-screen').style.display = 'none';
 
-// Skip login if already authenticated
-if (localStorage.getItem('ttm_auth') === '1') {
-  document.getElementById('login-screen').style.display = 'none';
-  showPlayerScreen();
-}
 
 document.getElementById('login-input').addEventListener('keydown', e => {
   if (e.key === 'Enter') checkLogin();
@@ -1695,6 +1690,12 @@ function showError(msg) {
 
 function hideError() {
   document.getElementById('error-banner').style.display = 'none';
+}
+
+// Skip login if already authenticated (runs after all declarations)
+if (localStorage.getItem('ttm_auth') === '1') {
+  document.getElementById('login-screen').style.display = 'none';
+  showPlayerScreen();
 }
 </script>
 </body>
