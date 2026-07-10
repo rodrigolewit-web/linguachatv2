@@ -775,11 +775,12 @@ document.getElementById('login-input').addEventListener('keydown', e => {
   if (e.key === 'Enter') checkLogin();
 });
 function checkLogin() {
-  const val = document.getElementById('login-input').value;
-  if (val.trim().toLowerCase().replace(/[^a-z0-9]/g, '') === 'ro85') {
+  const val = document.getElementById('login-input').value.trim().toLowerCase();
+  const ok = val === 'ro85!' || val === 'ro85';
+  if (ok) {
     localStorage.setItem('ttm_auth', '1');
     document.getElementById('login-screen').style.display = 'none';
-    try { showPlayerScreen(); } catch(e) { location.reload(); }
+    showPlayerScreen();
   } else {
     const err = document.getElementById('login-error');
     err.style.display = 'block';
