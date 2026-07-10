@@ -734,7 +734,10 @@
       <button class="lang-btn" id="lang-btn-pt" onclick="switchLanguage('pt')">🇧🇷</button>
     </div>
     <div class="vh-sub" id="hdr-sub"></div>
-    <button class="reset-btn" id="reset-btn">← Volver</button>
+    <div style="display:flex;gap:0.4rem;">
+      <button class="reset-btn" onclick="openConfigScreen()">⚙️</button>
+      <button class="reset-btn" id="reset-btn">← Volver</button>
+    </div>
   </div>
 
   <div class="voice-stage">
@@ -1040,6 +1043,7 @@ function renderConfigActions() {
     </div>
     <button class="cfg-action-btn primary" onclick="cfgOpenHistory()">📚 Ver historial y progreso</button>
     <button class="cfg-action-btn secondary" onclick="cfgOpenAvatar()">🎨 Cambiar avatar</button>
+    ${configScreenPlayer !== currentPlayer ? `<button class="cfg-action-btn" style="background:var(--accent);color:#fff;border-color:var(--accent);" onclick="cfgSwitchPlayer()">▶ Jugar como ${configScreenPlayer}</button>` : ''}
   `;
 }
 
@@ -1048,6 +1052,12 @@ function cfgSaveLevel(val) {
   localStorage.setItem('ttm_level_' + configScreenPlayer, val);
   if (currentPlayer === configScreenPlayer) config.level = val;
   renderConfigActions();
+}
+
+function cfgSwitchPlayer() {
+  const p = configScreenPlayer;
+  closeConfigScreen();
+  selectPlayer(p);
 }
 
 function cfgOpenHistory() {
@@ -1224,6 +1234,7 @@ function showPlayerScreen() {
 
 function selectPlayer(player) {
   currentPlayer = player;
+  localStorage.setItem('ttm_last_player', player);
   config.lang = 'en';
   config.level = localStorage.getItem('ttm_level_' + player) || 'intermediate';
   updateStreak(player);
@@ -1702,7 +1713,9 @@ function hideError() {
 // Skip login if already authenticated (runs after all declarations)
 if (localStorage.getItem('ttm_auth') === '1') {
   document.getElementById('login-screen').style.display = 'none';
-  showPlayerScreen();
+  const lastPlayer = localStorage.getItem('ttm_last_player');
+  if (lastPlayer) selectPlayer(lastPlayer);
+  else showPlayerScreen();
 }
 </script>
 </body>
