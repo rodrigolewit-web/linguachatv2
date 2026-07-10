@@ -417,6 +417,23 @@
     align-items: center;
   }
 
+  /* Lang switcher */
+  .lang-switcher { display: flex; gap: 0.5rem; align-items: center; }
+  .lang-btn {
+    font-size: 1.6rem; background: none; border: 2px solid transparent;
+    border-radius: 50%; width: 44px; height: 44px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform 0.15s, border-color 0.15s; opacity: 0.4;
+  }
+  .lang-btn.active {
+    opacity: 1; border-color: var(--accent);
+    animation: flag-pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes flag-pulse {
+    0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(79,156,249,0.4); }
+    50% { transform: scale(1.18); box-shadow: 0 0 0 6px rgba(79,156,249,0); }
+  }
+
   /* Header */
   .voice-header {
     width: 100%;
@@ -710,24 +727,13 @@
 
 <!-- ══ VOICE SCREEN ══ -->
 <div id="voice-screen">
-  <!-- Language picker overlay -->
-  <div id="lang-picker" style="display:none;position:absolute;inset:0;z-index:50;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.5rem;padding:2rem;">
-    <p style="font-size:0.75rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);">¿Qué idioma practicamos hoy?</p>
-    <div style="display:flex;flex-direction:column;gap:0.9rem;width:100%;max-width:280px;">
-      <button onclick="pickLanguage('en')" style="font-size:1.15rem;padding:1rem;border-radius:14px;border:2px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;display:flex;align-items:center;gap:0.75rem;">🇬🇧 <span>English</span></button>
-      <button onclick="pickLanguage('fr')" style="font-size:1.15rem;padding:1rem;border-radius:14px;border:2px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;display:flex;align-items:center;gap:0.75rem;">🇫🇷 <span>Français</span></button>
-      <button onclick="pickLanguage('pt')" style="font-size:1.15rem;padding:1rem;border-radius:14px;border:2px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;display:flex;align-items:center;gap:0.75rem;">🇧🇷 <span>Português</span></button>
-    </div>
-  </div>
-
   <div class="voice-header">
-    <div class="vh-left">
-      <span class="vh-flag" id="hdr-flag"></span>
-      <div>
-        <div class="vh-title" id="hdr-title"></div>
-        <div class="vh-sub" id="hdr-sub"></div>
-      </div>
+    <div class="lang-switcher">
+      <button class="lang-btn" id="lang-btn-en" onclick="switchLanguage('en')">🇬🇧</button>
+      <button class="lang-btn" id="lang-btn-fr" onclick="switchLanguage('fr')">🇫🇷</button>
+      <button class="lang-btn" id="lang-btn-pt" onclick="switchLanguage('pt')">🇧🇷</button>
     </div>
+    <div class="vh-sub" id="hdr-sub"></div>
     <button class="reset-btn" id="reset-btn">← Volver</button>
   </div>
 
@@ -1284,35 +1290,35 @@ document.getElementById('reset-btn').addEventListener('click', resetSession);
 // ══ START ══
 function updateVoiceHeader() {
   const meta = LANG_META[config.lang] || LANG_META['en'];
-  document.getElementById('hdr-flag').textContent = meta.flag;
-  document.getElementById('hdr-title').textContent = meta.name + ' — ' + meta.agentName;
   const levelLabel = { beginner: '🌱 Principiante', intermediate: '📚 Intermedio', advanced: '🔥 Avanzado' }[config.level] || '';
   document.getElementById('hdr-sub').textContent = levelLabel;
   document.getElementById('orb-emoji').textContent = meta.flag;
   const listenBtn = document.getElementById('listen-btn');
   if (listenBtn) listenBtn.textContent = '▶ Escuchar a ' + meta.agentName;
+  // Update active flag button
+  ['en','fr','pt'].forEach(l => {
+    const btn = document.getElementById('lang-btn-' + l);
+    if (btn) btn.classList.toggle('active', l === config.lang);
+  });
 }
 
 function startVoiceSession(isContinuing = false) {
   document.getElementById('setup-screen').style.display = 'none';
   document.getElementById('voice-screen').style.display = 'flex';
-
-  if (!langConfirmed) {
-    document.getElementById('lang-picker').style.display = 'flex';
-  } else {
-    updateVoiceHeader();
-    setupSpeechRecognition();
-    kickoffConversation(isContinuing);
-  }
-}
-
-function pickLanguage(lang) {
-  config.lang = lang;
-  langConfirmed = true;
-  document.getElementById('lang-picker').style.display = 'none';
+  if (!langConfirmed) { config.lang = 'en'; langConfirmed = true; }
   updateVoiceHeader();
   setupSpeechRecognition();
-  kickoffConversation(false);
+  kickoffConversation(isContinuing);
+}
+
+function switchLanguage(lang) {
+  if (lang === config.lang) return;
+  config.lang = lang;
+  langConfirmed = true;
+  updateVoiceHeader();
+  if (recognition) { try { recognition.abort(); } catch(e) {} }
+  setupSpeechRecognition();
+  saveSession();
 }
 
 function resetSession() {
