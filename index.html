@@ -1385,13 +1385,12 @@ async function callAgent(userMessage) {
 
     let fullText = data.content?.map(b => b.text || '').join('') || '';
 
-    // Detect language switch tag [LANG:xx]
-    const langMatch = fullText.match(/^\[LANG:(en|fr|pt)\]\n?/);
+    // Detect language switch tag [LANG:xx] — may appear anywhere in first 100 chars
+    const langMatch = fullText.match(/\[LANG:(en|fr|pt)\]/i);
     if (langMatch) {
-      config.lang = langMatch[1];
-      fullText = fullText.slice(langMatch[0].length);
+      config.lang = langMatch[1].toLowerCase();
+      fullText = fullText.replace(/\s*\[LANG:(en|fr|pt)\]\s*/i, '').trim();
       updateVoiceHeader();
-      setupSpeechRecognition();
     }
 
     conversationHistory.push({ role: 'assistant', content: fullText });
