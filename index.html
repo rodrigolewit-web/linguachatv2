@@ -769,12 +769,20 @@
 <script>
 // ══ LOGIN ══
 document.getElementById('setup-screen').style.display = 'none';
+
+// Skip login if already authenticated
+if (localStorage.getItem('ttm_auth') === '1') {
+  document.getElementById('login-screen').style.display = 'none';
+  showPlayerScreen();
+}
+
 document.getElementById('login-input').addEventListener('keydown', e => {
   if (e.key === 'Enter') checkLogin();
 });
 function checkLogin() {
   const val = document.getElementById('login-input').value;
   if (val.trim().toLowerCase() === 'jusa!') {
+    localStorage.setItem('ttm_auth', '1');
     document.getElementById('login-screen').style.display = 'none';
     showPlayerScreen();
   } else {
