@@ -696,7 +696,7 @@
 </div>
 
 <!-- ══ SETUP SCREEN ══ -->
-<div id="setup-screen">
+<div id="setup-screen" style="display:none">
   <button onclick="showPlayerScreen()" style="align-self:flex-start;margin:0.75rem 0 0 0.75rem;background:none;border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:6px 14px;font-size:0.85rem;cursor:pointer;">← Volver</button>
   <div class="logo">
     <h1>Toc Tu Mi</h1>
@@ -774,7 +774,7 @@ document.getElementById('login-input').addEventListener('keydown', e => {
 });
 function checkLogin() {
   const val = document.getElementById('login-input').value;
-  if (val === 'jusa!') {
+  if (val.trim().toLowerCase() === 'jusa!') {
     document.getElementById('login-screen').style.display = 'none';
     showPlayerScreen();
   } else {
