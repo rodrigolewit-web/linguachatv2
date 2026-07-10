@@ -776,10 +776,10 @@ document.getElementById('login-input').addEventListener('keydown', e => {
 });
 function checkLogin() {
   const val = document.getElementById('login-input').value;
-  if (val.trim().toLowerCase().replace(/[^a-z0-9]/g, '') === 'jusa') {
+  if (val.trim().toLowerCase().replace(/[^a-z0-9]/g, '') === 'ro85') {
     localStorage.setItem('ttm_auth', '1');
     document.getElementById('login-screen').style.display = 'none';
-    showPlayerScreen();
+    try { showPlayerScreen(); } catch(e) { location.reload(); }
   } else {
     const err = document.getElementById('login-error');
     err.style.display = 'block';
