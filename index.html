@@ -1208,8 +1208,16 @@ function selectPlayer(player) {
   config.level = localStorage.getItem('ttm_level_' + player) || 'intermediate';
   updateStreak(player);
   document.getElementById('player-screen').style.display = 'none';
-  document.getElementById('setup-screen').style.display = 'flex';
-  checkSavedSession();
+
+  const saved = loadSession(player);
+  conversationHistory.length = 0; langConfirmed = false; config.lang = 'en';
+  if (saved) {
+    if (saved.config) Object.assign(config, saved.config);
+    if (saved.history && saved.history.length > 0) conversationHistory.push(...saved.history);
+    if (config.lang && config.lang !== 'en') langConfirmed = true;
+  }
+  unlockTTS();
+  startVoiceSession(!!saved);
 }
 
 
