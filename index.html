@@ -704,8 +704,7 @@
   </div>
 
   <div class="setup-card">
-<button class="start-btn" id="continue-btn" style="display:none;background:var(--surface2);border:1.5px solid var(--accent);color:var(--accent);">↩ Continuar conversación anterior</button>
-    <button class="start-btn" id="start-btn" disabled>🎙 Empezar conversación nueva →</button>
+    <button class="start-btn" id="start-btn">🎙 Empezar</button>
   </div>
 </div>
 
@@ -1245,33 +1244,18 @@ function checkReady() {
   }
 }
 
-// Check for saved session after login
-function checkSavedSession() {
-  const saved = loadSession(currentPlayer);
-  const btn = document.getElementById('continue-btn');
-  btn.style.display = saved ? 'block' : 'none';
-  btn.textContent = saved ? `↩ Continuar conversación de ${currentPlayer}` : '';
-}
-
-document.getElementById('continue-btn').addEventListener('click', () => {
-  const saved = loadSession(currentPlayer);
-  if (!saved) return;
-  Object.assign(config, saved.config);
-  conversationHistory.push(...saved.history);
-  if (config.lang && config.lang !== 'en') langConfirmed = true;
-  unlockTTS();
-  startVoiceSession(true);
-});
+function checkSavedSession() {}
 
 document.getElementById('start-btn').addEventListener('click', () => {
-  // Load existing history so the agent remembers past sessions
   const saved = loadSession(currentPlayer);
   conversationHistory.length = 0; langConfirmed = false; config.lang = 'en';
-  if (saved && saved.history && saved.history.length > 0) {
-    conversationHistory.push(...saved.history);
+  if (saved) {
+    if (saved.config) Object.assign(config, saved.config);
+    if (saved.history && saved.history.length > 0) conversationHistory.push(...saved.history);
+    if (config.lang && config.lang !== 'en') langConfirmed = true;
   }
   unlockTTS();
-  startVoiceSession(false);
+  startVoiceSession(!!saved);
 });
 document.getElementById('reset-btn').addEventListener('click', resetSession);
 
