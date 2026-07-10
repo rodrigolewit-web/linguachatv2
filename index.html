@@ -627,7 +627,7 @@
   <div class="login-card">
     <h2>Toc Tu Mi</h2>
     <p style="color:var(--muted);font-size:0.8rem;">Ingresá tu clave de acceso</p>
-    <input type="password" id="login-input" placeholder="••••••" autocomplete="off" />
+    <input type="password" id="login-input" placeholder="••••••" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" />
     <div class="login-error" id="login-error">Clave incorrecta</div>
     <button onclick="checkLogin()">Entrar</button>
   </div>
@@ -776,7 +776,7 @@ document.getElementById('login-input').addEventListener('keydown', e => {
 });
 function checkLogin() {
   const val = document.getElementById('login-input').value;
-  if (val.trim().toLowerCase() === 'jusa!') {
+  if (val.trim().toLowerCase().replace(/[^a-z0-9]/g, '') === 'jusa') {
     localStorage.setItem('ttm_auth', '1');
     document.getElementById('login-screen').style.display = 'none';
     showPlayerScreen();
