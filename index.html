@@ -990,7 +990,8 @@ function renderAnalysis(d) {
 let configScreenPlayer = null;
 
 function openConfigScreen() {
-  configScreenPlayer = null;
+  configScreenPlayer = currentPlayer || null;
+  pendingLevel = null;
   renderConfigPlayers();
   renderConfigActions();
   document.getElementById('config-screen').style.display = 'flex';
@@ -1012,9 +1013,12 @@ function renderConfigPlayers() {
 
 function selectConfigPlayer(p) {
   configScreenPlayer = p;
+  pendingLevel = null;
   renderConfigPlayers();
   renderConfigActions();
 }
+
+let pendingLevel = null;
 
 function renderConfigActions() {
   const el = document.getElementById('config-actions');
@@ -1025,33 +1029,42 @@ function renderConfigActions() {
     `;
     return;
   }
-  const savedLevel = localStorage.getItem('ttm_level_' + configScreenPlayer) || 'intermediate';
+  const currentLevel = pendingLevel || localStorage.getItem('ttm_level_' + configScreenPlayer) || 'intermediate';
   const levels = [
     { val: 'beginner',     emoji: '🌱', label: 'Principiante' },
     { val: 'intermediate', emoji: '📚', label: 'Intermedio' },
     { val: 'advanced',     emoji: '🔥', label: 'Avanzado' },
   ];
   const levelBtns = levels.map(l => `
-    <button class="opt-btn${savedLevel === l.val ? ' selected' : ''}" onclick="cfgSaveLevel('${l.val}')">
+    <button class="opt-btn${currentLevel === l.val ? ' selected' : ''}" onclick="cfgPendingLevel('${l.val}')">
       <span class="emoji">${l.emoji}</span>${l.label}
     </button>
   `).join('');
+  const hasChanges = pendingLevel && pendingLevel !== (localStorage.getItem('ttm_level_' + configScreenPlayer) || 'intermediate');
   el.innerHTML = `
     <div class="setup-section" style="width:100%;margin-bottom:0.5rem;">
       <label>Nivel de ${configScreenPlayer}</label>
       <div class="option-grid cols-3">${levelBtns}</div>
     </div>
+    ${hasChanges ? `<button class="cfg-action-btn" style="background:var(--accent);color:#fff;border-color:var(--accent);font-weight:700;" onclick="cfgSaveChanges()">💾 Guardar cambios</button>` : ''}
     <button class="cfg-action-btn primary" onclick="cfgOpenHistory()">📚 Ver historial y progreso</button>
     <button class="cfg-action-btn secondary" onclick="cfgOpenAvatar()">🎨 Cambiar avatar</button>
-    ${configScreenPlayer !== currentPlayer ? `<button class="cfg-action-btn" style="background:var(--accent);color:#fff;border-color:var(--accent);" onclick="cfgSwitchPlayer()">▶ Jugar como ${configScreenPlayer}</button>` : ''}
+    ${configScreenPlayer !== currentPlayer ? `<button class="cfg-action-btn" style="background:var(--surface2);border-color:var(--accent);color:var(--accent);" onclick="cfgSwitchPlayer()">▶ Jugar como ${configScreenPlayer}</button>` : ''}
   `;
 }
 
-function cfgSaveLevel(val) {
-  if (!configScreenPlayer) return;
-  localStorage.setItem('ttm_level_' + configScreenPlayer, val);
-  if (currentPlayer === configScreenPlayer) config.level = val;
+function cfgPendingLevel(val) {
+  pendingLevel = val;
   renderConfigActions();
+}
+
+function cfgSaveChanges() {
+  if (!configScreenPlayer || !pendingLevel) return;
+  localStorage.setItem('ttm_level_' + configScreenPlayer, pendingLevel);
+  if (currentPlayer === configScreenPlayer) config.level = pendingLevel;
+  pendingLevel = null;
+  renderConfigActions();
+  closeConfigScreen();
 }
 
 function cfgSwitchPlayer() {
