@@ -1040,13 +1040,12 @@ function renderConfigActions() {
       <span class="emoji">${l.emoji}</span>${l.label}
     </button>
   `).join('');
-  const hasChanges = pendingLevel && pendingLevel !== (localStorage.getItem('ttm_level_' + configScreenPlayer) || 'intermediate');
   el.innerHTML = `
     <div class="setup-section" style="width:100%;margin-bottom:0.5rem;">
       <label>Nivel de ${configScreenPlayer}</label>
       <div class="option-grid cols-3">${levelBtns}</div>
     </div>
-    ${hasChanges ? `<button class="cfg-action-btn" style="background:var(--accent);color:#fff;border-color:var(--accent);font-weight:700;" onclick="cfgSaveChanges()">💾 Guardar cambios</button>` : ''}
+    <button class="cfg-action-btn" style="background:var(--accent);color:#fff;border-color:var(--accent);font-weight:700;" onclick="cfgSaveChanges()">💾 Guardar cambios</button>
     <button class="cfg-action-btn primary" onclick="cfgOpenHistory()">📚 Ver historial y progreso</button>
     <button class="cfg-action-btn secondary" onclick="cfgOpenAvatar()">🎨 Cambiar avatar</button>
     ${configScreenPlayer !== currentPlayer ? `<button class="cfg-action-btn" style="background:var(--surface2);border-color:var(--accent);color:var(--accent);" onclick="cfgSwitchPlayer()">▶ Jugar como ${configScreenPlayer}</button>` : ''}
