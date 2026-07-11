@@ -1345,6 +1345,10 @@ function switchLanguage(lang) {
   if (recognition) { try { recognition.abort(); } catch(e) {} }
   setupSpeechRecognition();
   saveSession();
+  // Trigger agent to respond in the new language immediately
+  const meta = LANG_META[lang];
+  conversationHistory.push({ role: 'user', content: `[Language switched to ${meta.name}. Acknowledge briefly and continue in ${meta.name} only.]` });
+  callAgent('__already_pushed__');
 }
 
 function resetSession() {
