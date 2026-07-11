@@ -1058,11 +1058,14 @@ function cfgPendingLevel(val) {
 }
 
 function cfgSaveChanges() {
-  if (!configScreenPlayer || !pendingLevel) return;
-  localStorage.setItem('ttm_level_' + configScreenPlayer, pendingLevel);
-  if (currentPlayer === configScreenPlayer) config.level = pendingLevel;
+  if (!configScreenPlayer) return;
+  const levelToSave = pendingLevel || localStorage.getItem('ttm_level_' + configScreenPlayer) || 'intermediate';
+  localStorage.setItem('ttm_level_' + configScreenPlayer, levelToSave);
+  if (currentPlayer === configScreenPlayer) {
+    config.level = levelToSave;
+    updateVoiceHeader();
+  }
   pendingLevel = null;
-  renderConfigActions();
   closeConfigScreen();
 }
 
