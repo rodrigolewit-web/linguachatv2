@@ -765,6 +765,9 @@
     <!-- Listen button (shown when TTS needs user gesture) -->
     <button class="listen-btn" id="listen-btn" onclick="onListenTap()">▶ Escuchar a Alex</button>
 
+    <!-- Start button (user gesture required for mic + audio) -->
+    <button class="listen-btn" id="rt-start-btn" onclick="onStartTap()">▶ Iniciar</button>
+
 
     <!-- Mic -->
     <div class="mic-section">
@@ -1331,6 +1334,27 @@ function startVoiceSession(isContinuing = false) {
   document.getElementById('voice-screen').style.display = 'flex';
   if (!langConfirmed) { config.lang = 'en'; langConfirmed = true; }
   updateVoiceHeader();
+  // Wait for user tap before connecting (mic permission + audio need a gesture)
+  stopRealtimeSession();
+  setOrbState('idle');
+  setStatus('Listo para comenzar', '');
+  const lastAgent = [...conversationHistory].reverse().find(m => m.role === 'assistant');
+  document.getElementById('transcript-agent').textContent = lastAgent ? lastAgent.content.split('---')[0].trim() : '…';
+  document.getElementById('transcript-translation').style.display = 'none';
+  document.getElementById('transcript-user').textContent = '';
+  document.getElementById('mic-btn').disabled = true;
+  document.getElementById('mic-hint').textContent = '';
+  showStartBtn(true);
+}
+
+function showStartBtn(show) {
+  const btn = document.getElementById('rt-start-btn');
+  if (btn) btn.style.display = show ? 'flex' : 'none';
+}
+
+function onStartTap() {
+  hideError();
+  showStartBtn(false);
   startRealtimeSession();
 }
 
@@ -1720,13 +1744,19 @@ async function startRealtimeSession() {
   } catch (err) {
     showError('Error de conexión: ' + err.message);
     setOrbState('idle');
-    setStatus('Error — revisa tu conexión', '');
+    setStatus('Error — intenta de nuevo', '');
+    stopRealtimeSession();
+    showStartBtn(true);
   }
 }
 
 function onRtcOpen() {
   rtcConnected = true;
   rtcMuted = false;
+  const micBtnEl = document.getElementById('mic-btn');
+  micBtnEl.disabled = false;
+  micBtnEl.textContent = '🎙';
+  document.getElementById('mic-hint').textContent = '🎙 Activo — habla cuando quieras';
 
   // Inject recent history so AI has context
   const recent = conversationHistory.slice(-16);
