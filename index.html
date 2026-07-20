@@ -1799,12 +1799,14 @@ function onRtcEvent(event) {
       break;
     }
 
+    case 'response.output_item.added':
     case 'output_audio_buffer.started':
       isAgentSpeaking = true;
       setOrbState('speaking');
       setStatus('Hablando…', 'speaking');
       break;
 
+    case 'response.done':
     case 'output_audio_buffer.stopped':
     case 'output_audio_buffer.cleared':
       isAgentSpeaking = false;
