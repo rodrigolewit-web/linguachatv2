@@ -1262,15 +1262,14 @@ function selectPlayer(player) {
     if (saved.history && saved.history.length > 0) conversationHistory.push(...saved.history);
     if (config.lang && config.lang !== 'en') langConfirmed = true;
   }
-  unlockTTS();
   startVoiceSession(!!saved);
 }
 
 
 const LANG_META = {
-  en: { flag: '🇬🇧', name: 'English',    agentName: 'Alex',    ttsLang: 'en-US', sttLang: 'en-US' },
-  fr: { flag: '🇫🇷', name: 'Français',   agentName: 'Camille', ttsLang: 'fr-FR', sttLang: 'fr-FR' },
-  pt: { flag: '🇧🇷', name: 'Português',  agentName: 'Lucas',   ttsLang: 'pt-BR', sttLang: 'pt-BR' },
+  en: { flag: '🇬🇧', name: 'English',    agentName: 'Alex',    ttsLang: 'en-US', sttLang: 'en-US', realtimeVoice: 'alloy' },
+  fr: { flag: '🇫🇷', name: 'Français',   agentName: 'Camille', ttsLang: 'fr-FR', sttLang: 'fr-FR', realtimeVoice: 'shimmer' },
+  pt: { flag: '🇧🇷', name: 'Português',  agentName: 'Lucas',   ttsLang: 'pt-BR', sttLang: 'pt-BR', realtimeVoice: 'coral' },
 };
 
 const conversationHistory = [];
@@ -1308,7 +1307,6 @@ document.getElementById('start-btn').addEventListener('click', () => {
     if (saved.history && saved.history.length > 0) conversationHistory.push(...saved.history);
     if (config.lang && config.lang !== 'en') langConfirmed = true;
   }
-  unlockTTS();
   startVoiceSession(!!saved);
 });
 document.getElementById('reset-btn').addEventListener('click', resetSession);
@@ -1333,8 +1331,7 @@ function startVoiceSession(isContinuing = false) {
   document.getElementById('voice-screen').style.display = 'flex';
   if (!langConfirmed) { config.lang = 'en'; langConfirmed = true; }
   updateVoiceHeader();
-  setupSpeechRecognition();
-  kickoffConversation(isContinuing);
+  startRealtimeSession();
 }
 
 function switchLanguage(lang) {
@@ -1342,18 +1339,25 @@ function switchLanguage(lang) {
   config.lang = lang;
   langConfirmed = true;
   updateVoiceHeader();
-  if (recognition) { try { recognition.abort(); } catch(e) {} }
-  setupSpeechRecognition();
   saveSession();
-  // Trigger agent to respond in the new language immediately
-  const meta = LANG_META[lang];
-  conversationHistory.push({ role: 'user', content: `[Language switched to ${meta.name}. Acknowledge briefly and continue in ${meta.name} only.]` });
-  callAgent('__already_pushed__');
+  if (rtcConnected) {
+    const meta = LANG_META[lang];
+    sendRtcEvent({
+      type: 'session.update',
+      session: { instructions: buildSystemPrompt(true), voice: meta.realtimeVoice }
+    });
+    sendRtcEvent({
+      type: 'conversation.item.create',
+      item: { type: 'message', role: 'user', content: [{ type: 'input_text', text: `[Language switched to ${meta.name}. Briefly greet me in ${meta.name} and continue there.]` }] }
+    });
+    sendRtcEvent({ type: 'response.create', response: { modalities: ['text', 'audio'] } });
+  }
 }
 
 function resetSession() {
   // Stop everything
-  if (currentUtterance) { window.speechSynthesis.cancel(); }
+  stopRealtimeSession();
+  if (currentUtterance) { try { window.speechSynthesis.cancel(); } catch(e){} }
   if (recognition) { try { recognition.abort(); } catch(e){} }
   conversationHistory.length = 0; langConfirmed = false; config.lang = 'en';
   isAgentSpeaking = false;
@@ -1369,7 +1373,7 @@ function resetSession() {
 }
 
 // ══ SYSTEM PROMPT ══
-function buildSystemPrompt() {
+function buildSystemPrompt(forRealtime = false) {
   const meta = LANG_META[config.lang];
 
   const levelInstr = {
@@ -1381,9 +1385,9 @@ function buildSystemPrompt() {
   const paceInstr = 'Keep responses to 2-3 sentences. One clear follow-up question. Natural conversational flow.';
   const registerInstr = 'Use neutral everyday register. Contractions fine. Friendly but not slangy.';
 
-  const translationInstr = config.level !== 'advanced'
+  const translationInstr = (!forRealtime && config.level !== 'advanced')
     ? `CRITICAL: After your response in ${meta.name}, add exactly "---" on a new line, then a SHORT Spanish summary labeled "ES:". Example:\nHello! How are you today?\n---\nES: Te saluda y pregunta cómo estás.`
-    : `Do NOT add Spanish translations. Full immersion only.`;
+    : `Do NOT add any separators, symbols, or Spanish summaries. Voice-only mode — speak naturally.`;
 
   const langSection = `LANGUAGE: Always respond in ${meta.name}. Do NOT switch languages.`;
 
@@ -1659,12 +1663,190 @@ function startListening() {
   }
 }
 
-// Mic button — tap to speak
+// ══ OPENAI REALTIME API ══
+let rtcPeerConn = null;
+let rtcDataChannel = null;
+let rtcAudioEl = null;
+let rtcMicStream = null;
+let rtcMuted = false;
+let rtcConnected = false;
+let rtcAgentTextBuf = '';
+
+async function startRealtimeSession() {
+  stopRealtimeSession();
+  setOrbState('thinking');
+  setStatus('Conectando…', 'thinking');
+  document.getElementById('transcript-agent').textContent = '…';
+  document.getElementById('transcript-translation').style.display = 'none';
+
+  try {
+    rtcMicStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+
+    const meta = LANG_META[config.lang] || LANG_META.en;
+    const sessResp = await fetch('/api/realtime-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ system: buildSystemPrompt(true), voice: meta.realtimeVoice })
+    });
+    const sess = await sessResp.json();
+    if (sess.error) throw new Error(sess.error.message || JSON.stringify(sess.error));
+    const ephKey = sess.client_secret.value;
+
+    rtcPeerConn = new RTCPeerConnection();
+
+    rtcAudioEl = document.createElement('audio');
+    rtcAudioEl.autoplay = true;
+    document.body.appendChild(rtcAudioEl);
+    rtcPeerConn.ontrack = e => { rtcAudioEl.srcObject = e.streams[0]; };
+
+    rtcMicStream.getTracks().forEach(t => rtcPeerConn.addTrack(t, rtcMicStream));
+
+    rtcDataChannel = rtcPeerConn.createDataChannel('oai-events');
+    rtcDataChannel.addEventListener('open', onRtcOpen);
+    rtcDataChannel.addEventListener('message', e => onRtcEvent(JSON.parse(e.data)));
+
+    const offer = await rtcPeerConn.createOffer();
+    await rtcPeerConn.setLocalDescription(offer);
+
+    const sdpResp = await fetch('https://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-12-17', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${ephKey}`, 'Content-Type': 'application/sdp' },
+      body: offer.sdp
+    });
+    if (!sdpResp.ok) throw new Error(`OpenAI error ${sdpResp.status}`);
+
+    await rtcPeerConn.setRemoteDescription({ type: 'answer', sdp: await sdpResp.text() });
+
+  } catch (err) {
+    showError('Error de conexión: ' + err.message);
+    setOrbState('idle');
+    setStatus('Error — revisa tu conexión', '');
+  }
+}
+
+function onRtcOpen() {
+  rtcConnected = true;
+  rtcMuted = false;
+
+  // Inject recent history so AI has context
+  const recent = conversationHistory.slice(-16);
+  for (const msg of recent) {
+    sendRtcEvent({
+      type: 'conversation.item.create',
+      item: {
+        type: 'message',
+        role: msg.role,
+        content: [{ type: msg.role === 'user' ? 'input_text' : 'text', text: msg.content }]
+      }
+    });
+  }
+
+  if (conversationHistory.length > 0) {
+    // Continuing: show last agent message, wait for user to speak
+    const lastAgent = [...conversationHistory].reverse().find(m => m.role === 'assistant');
+    if (lastAgent) {
+      document.getElementById('transcript-agent').textContent = lastAgent.content.split('---')[0].trim();
+    }
+    setOrbState('idle');
+    setStatus('Habla cuando quieras 🎙', '');
+    document.getElementById('mic-hint').textContent = '🎙 Activo — habla cuando quieras';
+  } else {
+    // Fresh session: trigger greeting
+    sendRtcEvent({ type: 'response.create', response: { modalities: ['text', 'audio'] } });
+  }
+}
+
+function sendRtcEvent(event) {
+  if (rtcDataChannel?.readyState === 'open') {
+    rtcDataChannel.send(JSON.stringify(event));
+  }
+}
+
+function onRtcEvent(event) {
+  switch (event.type) {
+    case 'input_audio_buffer.speech_started':
+      setOrbState('listening');
+      setStatus('Escuchando…', 'listening');
+      document.getElementById('transcript-user').textContent = '…';
+      rtcAgentTextBuf = '';
+      break;
+
+    case 'input_audio_buffer.speech_stopped':
+      setOrbState('thinking');
+      setStatus('Pensando…', 'thinking');
+      break;
+
+    case 'conversation.item.input_audio_transcription.completed':
+      if (event.transcript) {
+        const t = event.transcript.trim();
+        document.getElementById('transcript-user').textContent = t;
+        conversationHistory.push({ role: 'user', content: t });
+      }
+      break;
+
+    case 'response.text.delta':
+      rtcAgentTextBuf += (event.delta || '');
+      document.getElementById('transcript-agent').textContent = rtcAgentTextBuf.trim();
+      break;
+
+    case 'response.text.done': {
+      const text = (event.text || rtcAgentTextBuf).trim();
+      document.getElementById('transcript-agent').textContent = text;
+      document.getElementById('transcript-translation').style.display = 'none';
+      if (text) conversationHistory.push({ role: 'assistant', content: text });
+      saveSession();
+      rtcAgentTextBuf = '';
+      break;
+    }
+
+    case 'output_audio_buffer.started':
+      isAgentSpeaking = true;
+      setOrbState('speaking');
+      setStatus('Hablando…', 'speaking');
+      break;
+
+    case 'output_audio_buffer.stopped':
+    case 'output_audio_buffer.cleared':
+      isAgentSpeaking = false;
+      setOrbState('idle');
+      setStatus('Habla cuando quieras 🎙', '');
+      document.getElementById('transcript-user').textContent = '';
+      break;
+
+    case 'error':
+      showError('Error: ' + (event.error?.message || 'desconocido'));
+      break;
+  }
+}
+
+function stopRealtimeSession() {
+  rtcConnected = false;
+  rtcMuted = false;
+  if (rtcDataChannel) { try { rtcDataChannel.close(); } catch(e){} rtcDataChannel = null; }
+  if (rtcPeerConn) { try { rtcPeerConn.close(); } catch(e){} rtcPeerConn = null; }
+  if (rtcMicStream) { rtcMicStream.getTracks().forEach(t => t.stop()); rtcMicStream = null; }
+  if (rtcAudioEl) { rtcAudioEl.srcObject = null; rtcAudioEl.remove(); rtcAudioEl = null; }
+}
+
+function rtcToggleMute() {
+  rtcMuted = !rtcMuted;
+  if (rtcMicStream) rtcMicStream.getAudioTracks().forEach(t => { t.enabled = !rtcMuted; });
+  const btn = document.getElementById('mic-btn');
+  if (btn) btn.textContent = rtcMuted ? '🔇' : '🎙';
+  const hint = document.getElementById('mic-hint');
+  if (hint) hint.textContent = rtcMuted ? 'Silenciado — toca para activar' : '🎙 Activo — habla cuando quieras';
+}
+
+// Mic button — mute toggle in Realtime mode, tap-to-speak otherwise
 const micBtn = document.getElementById('mic-btn');
 micBtn.addEventListener('click', () => {
+  if (rtcConnected) {
+    hideError();
+    rtcToggleMute();
+    return;
+  }
   unlockTTS();
   if (isAgentSpeaking) return;
-
   hideError();
   micBtn.classList.add('active');
   enableMic(false);
@@ -1712,6 +1894,7 @@ function setStatus(text, cls) {
 }
 
 function enableMic(enabled) {
+  if (rtcConnected) return; // Realtime: mic always active, controlled by mute toggle
   const btn = document.getElementById('mic-btn');
   btn.disabled = !enabled;
   document.getElementById('mic-hint').textContent = enabled
