@@ -1366,15 +1366,16 @@ function switchLanguage(lang) {
   saveSession();
   if (rtcConnected) {
     const meta = LANG_META[lang];
+    // GA API: voice can't change mid-session — update instructions only
     sendRtcEvent({
       type: 'session.update',
-      session: { instructions: buildSystemPrompt(true), voice: meta.realtimeVoice }
+      session: { type: 'realtime', instructions: buildSystemPrompt(true) }
     });
     sendRtcEvent({
       type: 'conversation.item.create',
       item: { type: 'message', role: 'user', content: [{ type: 'input_text', text: `[Language switched to ${meta.name}. Briefly greet me in ${meta.name} and continue there.]` }] }
     });
-    sendRtcEvent({ type: 'response.create', response: { modalities: ['text', 'audio'] } });
+    sendRtcEvent({ type: 'response.create' });
   }
 }
 
@@ -1714,7 +1715,8 @@ async function startRealtimeSession() {
     });
     const sess = await sessResp.json();
     if (sess.error) throw new Error(sess.error.message || JSON.stringify(sess.error));
-    const ephKey = sess.client_secret.value;
+    const ephKey = sess.value || sess.client_secret?.value;
+    if (!ephKey) throw new Error('No se recibió token de sesión');
 
     rtcPeerConn = new RTCPeerConnection();
 
@@ -1732,7 +1734,7 @@ async function startRealtimeSession() {
     const offer = await rtcPeerConn.createOffer();
     await rtcPeerConn.setLocalDescription(offer);
 
-    const sdpResp = await fetch('https://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-12-17', {
+    const sdpResp = await fetch('https://api.openai.com/v1/realtime/calls?model=gpt-realtime', {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${ephKey}`, 'Content-Type': 'application/sdp' },
       body: offer.sdp
@@ -1766,7 +1768,7 @@ function onRtcOpen() {
       item: {
         type: 'message',
         role: msg.role,
-        content: [{ type: msg.role === 'user' ? 'input_text' : 'text', text: msg.content }]
+        content: [{ type: msg.role === 'user' ? 'input_text' : 'output_text', text: msg.content }]
       }
     });
   }
@@ -1782,7 +1784,7 @@ function onRtcOpen() {
     document.getElementById('mic-hint').textContent = '🎙 Activo — habla cuando quieras';
   } else {
     // Fresh session: trigger greeting
-    sendRtcEvent({ type: 'response.create', response: { modalities: ['text', 'audio'] } });
+    sendRtcEvent({ type: 'response.create' });
   }
 }
 
@@ -1814,13 +1816,17 @@ function onRtcEvent(event) {
       }
       break;
 
+    case 'response.output_audio_transcript.delta':
+    case 'response.audio_transcript.delta':
     case 'response.text.delta':
       rtcAgentTextBuf += (event.delta || '');
       document.getElementById('transcript-agent').textContent = rtcAgentTextBuf.trim();
       break;
 
+    case 'response.output_audio_transcript.done':
+    case 'response.audio_transcript.done':
     case 'response.text.done': {
-      const text = (event.text || rtcAgentTextBuf).trim();
+      const text = (event.transcript || event.text || rtcAgentTextBuf).trim();
       document.getElementById('transcript-agent').textContent = text;
       document.getElementById('transcript-translation').style.display = 'none';
       if (text) conversationHistory.push({ role: 'assistant', content: text });
