@@ -1364,19 +1364,39 @@ function switchLanguage(lang) {
   langConfirmed = true;
   updateVoiceHeader();
   saveSession();
-  if (rtcConnected) {
-    const meta = LANG_META[lang];
-    // GA API: voice can't change mid-session — update instructions only
-    sendRtcEvent({
-      type: 'session.update',
-      session: { type: 'realtime', instructions: buildSystemPrompt(true) }
-    });
-    sendRtcEvent({
-      type: 'conversation.item.create',
-      item: { type: 'message', role: 'user', content: [{ type: 'input_text', text: `[Language switched to ${meta.name}. Briefly greet me in ${meta.name} and continue there.]` }] }
-    });
-    sendRtcEvent({ type: 'response.create' });
+  if (!rtcConnected) return;
+  // GA API: voice can't change mid-session — update instructions only
+  sendRtcEvent({
+    type: 'session.update',
+    session: { type: 'realtime', instructions: buildSystemPrompt(true) }
+  });
+  if (rtcResponseActive || isAgentSpeaking) {
+    // Cancel the in-flight response and cut audio; greet in the new
+    // language once the cancellation is confirmed (response.done)
+    pendingLangSwitch = lang;
+    setStatus('Cambiando idioma…', 'thinking');
+    sendRtcEvent({ type: 'response.cancel' });
+    sendRtcEvent({ type: 'output_audio_buffer.clear' });
+    clearTimeout(langSwitchTimer);
+    langSwitchTimer = setTimeout(() => {
+      if (pendingLangSwitch) {
+        const l = pendingLangSwitch; pendingLangSwitch = null;
+        performLanguageSwitch(l);
+      }
+    }, 2000);
+  } else {
+    performLanguageSwitch(lang);
   }
+}
+
+function performLanguageSwitch(lang) {
+  rtcAgentTextBuf = '';
+  const meta = LANG_META[lang];
+  sendRtcEvent({
+    type: 'conversation.item.create',
+    item: { type: 'message', role: 'user', content: [{ type: 'input_text', text: `[Language switched to ${meta.name}. Briefly greet me in ${meta.name} and continue there.]` }] }
+  });
+  sendRtcEvent({ type: 'response.create' });
 }
 
 function resetSession() {
@@ -1696,6 +1716,9 @@ let rtcMicStream = null;
 let rtcMuted = false;
 let rtcConnected = false;
 let rtcAgentTextBuf = '';
+let rtcResponseActive = false;
+let pendingLangSwitch = null;
+let langSwitchTimer = null;
 
 async function startRealtimeSession() {
   stopRealtimeSession();
@@ -1835,6 +1858,10 @@ function onRtcEvent(event) {
       break;
     }
 
+    case 'response.created':
+      rtcResponseActive = true;
+      break;
+
     case 'response.output_item.added':
     case 'output_audio_buffer.started':
       isAgentSpeaking = true;
@@ -1843,23 +1870,45 @@ function onRtcEvent(event) {
       break;
 
     case 'response.done':
+      rtcResponseActive = false;
+      isAgentSpeaking = false;
+      document.getElementById('transcript-user').textContent = '';
+      if (pendingLangSwitch) {
+        clearTimeout(langSwitchTimer);
+        const l = pendingLangSwitch; pendingLangSwitch = null;
+        performLanguageSwitch(l);
+      } else {
+        setOrbState('idle');
+        setStatus('Habla cuando quieras 🎙', '');
+      }
+      break;
+
     case 'output_audio_buffer.stopped':
     case 'output_audio_buffer.cleared':
       isAgentSpeaking = false;
-      setOrbState('idle');
-      setStatus('Habla cuando quieras 🎙', '');
-      document.getElementById('transcript-user').textContent = '';
+      if (!pendingLangSwitch && !rtcResponseActive) {
+        setOrbState('idle');
+        setStatus('Habla cuando quieras 🎙', '');
+        document.getElementById('transcript-user').textContent = '';
+      }
       break;
 
-    case 'error':
-      showError('Error: ' + (event.error?.message || 'desconocido'));
+    case 'error': {
+      const msg = event.error?.message || '';
+      // Benign races from cancelling/creating responses during a language switch
+      if (/no active response|cancellation failed|already has an active response/i.test(msg)) break;
+      showError('Error: ' + (msg || 'desconocido'));
       break;
+    }
   }
 }
 
 function stopRealtimeSession() {
   rtcConnected = false;
   rtcMuted = false;
+  rtcResponseActive = false;
+  pendingLangSwitch = null;
+  clearTimeout(langSwitchTimer);
   if (rtcDataChannel) { try { rtcDataChannel.close(); } catch(e){} rtcDataChannel = null; }
   if (rtcPeerConn) { try { rtcPeerConn.close(); } catch(e){} rtcPeerConn = null; }
   if (rtcMicStream) { rtcMicStream.getTracks().forEach(t => t.stop()); rtcMicStream = null; }
