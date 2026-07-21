@@ -1719,6 +1719,7 @@ let rtcAgentTextBuf = '';
 let rtcResponseActive = false;
 let pendingLangSwitch = null;
 let langSwitchTimer = null;
+let rtcAudioCtx = null;
 
 async function startRealtimeSession() {
   stopRealtimeSession();
@@ -1728,7 +1729,21 @@ async function startRealtimeSession() {
   document.getElementById('transcript-translation').style.display = 'none';
 
   try {
-    rtcMicStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    // Android: create the AudioContext during the user tap (before any await)
+    // so we can route agent audio through the MEDIA channel. WebRTC audio on
+    // its own uses the in-call channel, which ignores Bluetooth A2DP (car
+    // radios, speakers) and plays through the phone instead.
+    if (!isIOS && (window.AudioContext || window.webkitAudioContext)) {
+      try {
+        rtcAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        rtcAudioCtx.resume();
+      } catch(e) { rtcAudioCtx = null; }
+    }
+
+    rtcMicStream = await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+      video: false
+    });
 
     const meta = LANG_META[config.lang] || LANG_META.en;
     const sessResp = await fetch('/api/realtime-session', {
@@ -1746,7 +1761,22 @@ async function startRealtimeSession() {
     rtcAudioEl = document.createElement('audio');
     rtcAudioEl.autoplay = true;
     document.body.appendChild(rtcAudioEl);
-    rtcPeerConn.ontrack = e => { rtcAudioEl.srcObject = e.streams[0]; };
+    rtcPeerConn.ontrack = e => {
+      const stream = e.streams[0];
+      // Chrome needs the stream attached to a media element for audio to flow,
+      // even when actual playback goes through Web Audio
+      rtcAudioEl.srcObject = stream;
+      if (rtcAudioCtx) {
+        try {
+          const src = rtcAudioCtx.createMediaStreamSource(stream);
+          src.connect(rtcAudioCtx.destination);
+          rtcAudioCtx.resume();
+          rtcAudioEl.muted = true; // avoid double audio — Web Audio handles playback
+        } catch(err) {
+          rtcAudioEl.muted = false; // fallback: play directly from the element
+        }
+      }
+    };
 
     rtcMicStream.getTracks().forEach(t => rtcPeerConn.addTrack(t, rtcMicStream));
 
@@ -1913,6 +1943,7 @@ function stopRealtimeSession() {
   if (rtcPeerConn) { try { rtcPeerConn.close(); } catch(e){} rtcPeerConn = null; }
   if (rtcMicStream) { rtcMicStream.getTracks().forEach(t => t.stop()); rtcMicStream = null; }
   if (rtcAudioEl) { rtcAudioEl.srcObject = null; rtcAudioEl.remove(); rtcAudioEl = null; }
+  if (rtcAudioCtx) { try { rtcAudioCtx.close(); } catch(e){} rtcAudioCtx = null; }
 }
 
 function rtcToggleMute() {
