@@ -735,6 +735,7 @@
     </div>
     <div class="vh-sub" id="hdr-sub"></div>
     <div style="display:flex;gap:0.4rem;">
+      <button class="reset-btn" id="mode-btn" onclick="toggleVoiceMode()" title="Cambiar modo de voz">📞</button>
       <button class="reset-btn" onclick="openConfigScreen()">⚙️</button>
       <button class="reset-btn" id="reset-btn">← Volver</button>
     </div>
@@ -1334,8 +1335,10 @@ function startVoiceSession(isContinuing = false) {
   document.getElementById('voice-screen').style.display = 'flex';
   if (!langConfirmed) { config.lang = 'en'; langConfirmed = true; }
   updateVoiceHeader();
+  updateModeBtn();
   // Wait for user tap before connecting (mic permission + audio need a gesture)
   stopRealtimeSession();
+  stopTurnAudio();
   setOrbState('idle');
   setStatus('Listo para comenzar', '');
   const lastAgent = [...conversationHistory].reverse().find(m => m.role === 'assistant');
@@ -1355,7 +1358,16 @@ function showStartBtn(show) {
 function onStartTap() {
   hideError();
   showStartBtn(false);
-  startRealtimeSession();
+  if (voiceMode === 'turns') startTurnSession();
+  else startRealtimeSession();
+}
+
+function startTurnSession() {
+  unlockTTS();
+  setupSpeechRecognition();
+  const btn = document.getElementById('mic-btn');
+  btn.textContent = '🎙';
+  kickoffConversation(conversationHistory.length > 0);
 }
 
 function switchLanguage(lang) {
@@ -1364,7 +1376,19 @@ function switchLanguage(lang) {
   langConfirmed = true;
   updateVoiceHeader();
   saveSession();
-  if (!rtcConnected) return;
+  // Session not started yet — the new language applies on Iniciar
+  if (document.getElementById('rt-start-btn').style.display === 'flex') return;
+
+  if (!rtcConnected) {
+    if (voiceMode === 'turns') {
+      // Turn-based mode: abort STT and ask the agent to continue in the new language
+      if (recognition) { try { recognition.abort(); } catch(e){} }
+      const meta = LANG_META[lang];
+      conversationHistory.push({ role: 'user', content: `[Language switched to ${meta.name}. Acknowledge briefly and continue in ${meta.name} only.]` });
+      callAgent('__already_pushed__');
+    }
+    return;
+  }
   // GA API: voice can't change mid-session — update instructions only
   sendRtcEvent({
     type: 'session.update',
@@ -1402,8 +1426,7 @@ function performLanguageSwitch(lang) {
 function resetSession() {
   // Stop everything
   stopRealtimeSession();
-  if (currentUtterance) { try { window.speechSynthesis.cancel(); } catch(e){} }
-  if (recognition) { try { recognition.abort(); } catch(e){} }
+  stopTurnAudio();
   conversationHistory.length = 0; langConfirmed = false; config.lang = 'en';
   isAgentSpeaking = false;
 
@@ -1532,7 +1555,7 @@ function onTTSDone() {
 
   // Check if mic is usable
   const micAvailable = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
-  if (micAvailable && recognition) {
+  if (micAvailable) {
     setStatus('Tu turno — presiona el micrófono 🎙', '');
     enableMic(true);
     const hint = document.getElementById('mic-hint');
@@ -1720,6 +1743,51 @@ let rtcResponseActive = false;
 let pendingLangSwitch = null;
 let langSwitchTimer = null;
 let rtcAudioCtx = null;
+// 'realtime' = llamada fluida (OpenAI Realtime) | 'turns' = por turnos (STT + TTS)
+let voiceMode = localStorage.getItem('ttm_voice_mode') === 'turns' ? 'turns' : 'realtime';
+
+function updateModeBtn() {
+  const btn = document.getElementById('mode-btn');
+  if (!btn) return;
+  btn.textContent = voiceMode === 'realtime' ? '📞' : '🎙';
+  btn.title = voiceMode === 'realtime'
+    ? 'Modo: llamada fluida — toca para cambiar a por turnos'
+    : 'Modo: por turnos — toca para cambiar a llamada fluida';
+}
+
+function stopTurnAudio() {
+  if (currentUtterance) { try { currentUtterance.pause(); currentUtterance.src = ''; } catch(e){} currentUtterance = null; }
+  try { window.speechSynthesis.cancel(); } catch(e){}
+  if (recognition) { try { recognition.abort(); } catch(e){} }
+  showListenBtn(false);
+  isAgentSpeaking = false;
+}
+
+function toggleVoiceMode() {
+  voiceMode = voiceMode === 'realtime' ? 'turns' : 'realtime';
+  localStorage.setItem('ttm_voice_mode', voiceMode);
+  updateModeBtn();
+  hideError();
+  // If the session hasn't started yet (Iniciar still visible), just remember the mode
+  if (document.getElementById('rt-start-btn').style.display === 'flex') return;
+
+  if (voiceMode === 'turns') {
+    // Leave the realtime call → push-to-talk turns
+    stopRealtimeSession();
+    const btn = document.getElementById('mic-btn');
+    btn.textContent = '🎙';
+    btn.disabled = false;
+    setOrbState('idle');
+    setStatus('Modo por turnos — presiona 🎙 para hablar', '');
+    document.getElementById('mic-hint').textContent = 'Presiona 🎙 para hablar';
+    unlockTTS();
+    setupSpeechRecognition();
+  } else {
+    // Stop turn-based audio/STT and join the realtime call
+    stopTurnAudio();
+    startRealtimeSession();
+  }
+}
 
 async function startRealtimeSession() {
   stopRealtimeSession();
